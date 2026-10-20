@@ -1,0 +1,69 @@
+{
+  "name": "mosaic",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "^22.12.0 || ^24.0.0 || >=26.0.0"
+  },
+  "packageManager": "npm@11.10.1",
+  "files": [
+    "src",
+    "migrations",
+    "public",
+    "scripts",
+    "next.config.ts",
+    "tsconfig.json",
+    "package-lock.json",
+    ".env.example",
+    "README.md"
+  ],
+  "scripts": {
+    "dev": "next dev --hostname localhost",
+    "build": "next build --webpack",
+    "start": "next start --hostname localhost",
+    "local:db": "node --import tsx scripts/local-db.ts",
+    "db:migrate": "node --env-file=.env.local --import tsx scripts/migrate.ts",
+    "db:backup": "node --env-file=.env.local --import tsx scripts/backup.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:e2e": "playwright test",
+    "test:hosted": "playwright test --config playwright.hosted.config.ts",
+    "check:package": "node --import tsx scripts/check-package.ts",
+    "check:publication": "node --import tsx scripts/check-publication.ts",
+    "quality:unused": "knip",
+    "quality:duplicates": "jscpd src --output .local/evidence/duplication --reporters json",
+    "quality:scan": "desloppify --lang typescript scan --path .",
+    "quality:status": "desloppify --lang typescript status",
+    "quality:next": "desloppify --lang typescript next",
+    "quality:review": "desloppify --lang typescript review --prepare"
+  },
+  "dependencies": {
+    "next": "16.4.2",
+    "postgres": "3.4.9",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "server-only": "0.0.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@types/node": "26.6.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "embedded-postgres": "18.4.0-beta.17",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.4.2",
+    "jscpd": "5.4.1",
+    "knip": "6.41.0",
+    "prettier": "3.9.10",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "vitest": "5.0.5"
+  }
+}

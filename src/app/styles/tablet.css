@@ -1,0 +1,121 @@
+@media (max-width: 800px) {
+  .app-shell {
+    display: block;
+  }
+  .sidebar {
+    position: static;
+    width: 100%;
+    padding: 17px 20px 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 15px;
+  }
+  .sidebar .brand {
+    margin: 0;
+    padding: 0;
+    font-size: 25px;
+  }
+  .workspace-picker {
+    margin: 0;
+    max-width: 190px;
+  }
+  .workspace-picker .eyebrow {
+    display: none;
+  }
+  .workspace-picker select {
+    font-size: 10px;
+  }
+  .sidebar nav {
+    grid-column: 1/-1;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 4px;
+    overflow: auto;
+  }
+  .sidebar nav a {
+    font-size: 10px;
+    gap: 5px;
+    padding: 9px 8px;
+    border-radius: 4px 4px 0 0;
+    min-height: 43px;
+    white-space: nowrap;
+  }
+  .sidebar nav a > span {
+    font-size: 15px;
+    width: 15px;
+  }
+  .sidebar-note,
+  .account {
+    display: none;
+  }
+  .main-area {
+    margin: 0;
+  }
+  .topbar {
+    height: 48px;
+    padding: 0 22px;
+  }
+  .topbar-note {
+    font-size: 9px;
+  }
+  .workspace-main {
+    padding: 30px 22px 50px;
+  }
+  .page-heading {
+    align-items: flex-start;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-bottom: 25px;
+  }
+  .page-heading h1 {
+    font-size: 31px;
+  }
+  .page-heading .muted {
+    font-size: 11px;
+  }
+  .page-heading button {
+    min-height: 40px;
+  }
+  .board {
+    gap: 13px;
+  }
+  .board-column > h2 {
+    font-size: 10px;
+  }
+  .task-card h3 {
+    font-size: 12px;
+  }
+  .task-overline {
+    font-size: 7px;
+  }
+  .task-meta {
+    font-size: 8px;
+  }
+  .workspace-footer {
+    padding: 18px 22px;
+  }
+  .workspace-footer > span:last-child {
+    display: none;
+  }
+  .hero {
+    padding-top: 70px;
+  }
+  .entry-page {
+    padding: 0 30px;
+  }
+  .lifecycle {
+    gap: 20px;
+  }
+  .lifecycle span {
+    font-size: 11px;
+  }
+  .source-paper {
+    padding: 28px;
+  }
+  .source-card {
+    padding: 21px;
+    gap: 18px;
+  }
+}

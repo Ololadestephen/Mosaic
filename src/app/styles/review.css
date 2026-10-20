@@ -1,0 +1,256 @@
+.success {
+  background: #edf2e5;
+  border: 1px solid #d1dec2;
+  color: #4d6545;
+  padding: 16px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 20px 0;
+}
+.source-on-review,
+.receipt {
+  margin: 22px 0;
+  padding: 24px;
+  border: 1px solid #e2dece;
+  border-radius: 6px;
+  background: #f7f6f1;
+}
+.source-on-review summary,
+.receipt h3 {
+  font-family: Georgia, serif;
+  font-size: 22px;
+  font-weight: 400;
+  cursor: pointer;
+}
+.source-on-review pre {
+  white-space: pre-wrap;
+  overflow: auto;
+  max-height: 240px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.proposal-group > h3 {
+  margin: 28px 0 0;
+  font-family: Georgia, serif;
+  font-size: 22px;
+  font-weight: 400;
+}
+.receipt ul {
+  font-size: 13px;
+  line-height: 1.8;
+  padding-left: 18px;
+}
+.success a {
+  text-decoration: underline;
+}
+.question-panel,
+.preserved-panel {
+  padding: 24px;
+  border: 1px solid #e2dece;
+  background: #f4f1e7;
+  border-radius: 6px;
+  margin: 22px 0;
+}
+.question-panel h3,
+.preserved-panel h3 {
+  font-family: Georgia, serif;
+  font-size: 22px;
+  font-weight: 400;
+}
+.question-panel ul,
+.preserved-panel ul {
+  font-size: 12px;
+  line-height: 1.9;
+  padding-left: 18px;
+}
+.preserved-panel {
+  background: #eef1e7;
+  border-color: #dbe1d0;
+}
+.proposal-row {
+  padding: 27px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 7px;
+  margin: 17px 0;
+}
+.proposal-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.select-proposal {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 15px;
+  min-height: 44px;
+}
+.select-proposal input {
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  accent-color: var(--accent);
+}
+.select-proposal span {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.select-proposal small {
+  font-size: 9px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1.3px;
+}
+.select-proposal b {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.value-diff {
+  display: grid;
+  grid-template-columns: 1fr 25px 1fr;
+  gap: 15px;
+  padding: 20px;
+  margin: 22px 0;
+  background: #f2f3eb;
+  border-radius: 5px;
+  font-size: 12px;
+  align-items: center;
+}
+.value-diff small {
+  font-size: 9px;
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.proposal-reason,
+.create-fields {
+  font-size: 12px;
+  margin: 22px 0 10px;
+}
+.proposal-row blockquote {
+  margin-top: 20px;
+}
+.proposal-row .text-button {
+  font-size: 11px;
+}
+.review-actions {
+  position: sticky;
+  bottom: 12px;
+  padding: 20px;
+  background: #f0f2e8;
+  border: 1px solid #ccd7be;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  box-shadow: 0 4px 18px #33432212;
+  margin-top: 25px;
+  font-size: 11px;
+}
+.review-actions > div {
+  display: flex;
+  gap: 10px;
+}
+.review-actions button {
+  font-size: 11px;
+}
+.review-actions > small {
+  width: 100%;
+  font-size: 9px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.edit-proposal {
+  margin: 15px 0;
+  padding: 20px;
+  background: #f5f5ef;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  max-width: 450px;
+}
+.edit-proposal > small {
+  font-size: 10px;
+  color: var(--muted);
+}
+.undo-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 17px;
+  border-bottom: 1px solid var(--line);
+  padding: 17px 0;
+}
+.undo-row > div {
+  min-width: 0;
+}
+.undo-row b {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+.undo-row small {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+}
+.review > .notice {
+  margin-top: 8px;
+}
+@media (max-width: 600px) {
+  .proposal-row {
+    padding: 20px 17px;
+  }
+  .proposal-heading {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .select-proposal {
+    gap: 11px;
+  }
+  .select-proposal b {
+    font-size: 14px;
+  }
+  .value-diff {
+    padding: 16px;
+    gap: 9px;
+    grid-template-columns: 1fr 14px 1fr;
+    font-size: 11px;
+  }
+  .value-diff small {
+    font-size: 8px;
+  }
+  .review-actions {
+    padding: 17px;
+    bottom: 8px;
+    gap: 12px;
+  }
+  .review-actions > div {
+    width: 100%;
+    flex-direction: column;
+  }
+  .review-actions button {
+    width: 100%;
+  }
+  .question-panel,
+  .preserved-panel {
+    padding: 20px;
+  }
+  .edit-proposal {
+    padding: 17px;
+  }
+  .edit-proposal .inline-actions {
+    flex-direction: row;
+  }
+  .undo-row {
+    gap: 10px;
+  }
+}

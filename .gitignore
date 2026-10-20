@@ -1,0 +1,43 @@
+# Local planning and agent context: never publish or force-add.
+/AGENTS.md
+/IDEA.md
+/PLAN.md
+/BUILD.md
+/TEST_PLAN.md
+/DECISIONS.md
+/HANDOFF.md
+/.local/
+/.desloppify/
+# Private runtime material (future application repo must retain these rules).
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+node_modules/
+.next/
+coverage/
+playwright-report/
+test-results/
+/.local-*
+/.worktrees/
+/dist/
+/out/
+*.tsbuildinfo
+next-env.d.ts
+*.log
+.DS_Store
+# Private database, credential and local deployment material.
+*.dump
+*.backup
+*.bak
+*.db
+*.sqlite
+*.sqlite3
+*.p12
+*.pfx
+pgdata/
+backups/
+credentials
+.aws/
+.vercel/

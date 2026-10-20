@@ -1,0 +1,187 @@
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+.sidebar {
+  width: 220px;
+  background: #eeeee6;
+  border-right: 1px solid #e0e2d6;
+  display: flex;
+  flex-direction: column;
+  padding: 29px 18px 18px;
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 10;
+}
+.sidebar .brand {
+  padding-left: 7px;
+  margin-bottom: 38px;
+}
+.workspace-picker {
+  margin-bottom: 29px;
+}
+.workspace-picker .eyebrow {
+  font-size: 9px;
+  margin: 0 9px 9px;
+}
+.workspace-picker select {
+  background: #e5e8dd;
+  border: 1px solid #dadecf;
+  font-weight: 500;
+  padding: 9px;
+  font-size: 12px;
+  min-height: 39px;
+}
+.sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.sidebar nav a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #707569;
+  padding: 11px 13px;
+  border-radius: 5px;
+  min-height: 42px;
+  font-size: 12px;
+}
+.sidebar nav a.active {
+  background: #e0e5d6;
+  color: var(--accent-dark);
+  font-weight: 600;
+}
+.sidebar nav a > span {
+  font-size: 18px;
+  width: 20px;
+  font-weight: 400;
+}
+.sidebar nav a small {
+  margin-left: auto;
+  background: #d1d9c7;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+.sidebar-note {
+  margin-top: auto;
+  padding: 48px 11px 23px;
+  color: #838a7b;
+}
+.sidebar-note > span {
+  font-size: 23px;
+  color: #a9b29c;
+}
+.sidebar-note p {
+  font-family: Georgia, serif;
+  font-size: 17px;
+  line-height: 1.5;
+  margin: 12px 0 0;
+}
+.account {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border-top: 1px solid #dfe1d4;
+  padding: 20px 0 0;
+}
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 31px;
+  height: 31px;
+  background: #ddd9c8;
+  color: #62644e;
+  border-radius: 50%;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.avatar.small {
+  width: 23px;
+  height: 23px;
+  font-size: 10px;
+  background: #e8ebdf;
+}
+.account b {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  max-width: 95px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.account small {
+  font-size: 10px;
+  color: var(--muted);
+}
+.account .icon-button {
+  margin-left: auto;
+}
+.icon-button {
+  border: none;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 4px;
+  font-size: 21px;
+  background: transparent;
+}
+.main-area {
+  margin-left: 220px;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.topbar {
+  height: 69px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  padding: 0 43px;
+  font-size: 11px;
+  color: #73796c;
+}
+.topbar-note {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #828779;
+  font-size: 10px;
+}
+.status-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background: #829276;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.workspace-main {
+  padding: 45px 43px 70px;
+  flex: 1;
+}
+.page-heading {
+  display: flex;
+  gap: 25px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 36px;
+}
+.page-heading h1 {
+  font-size: 34px;
+  margin: 10px 0 12px;
+  letter-spacing: -1px;
+}
+.page-heading .muted {
+  font-size: 12px;
+  margin-bottom: 0;
+}
+.page-heading button {
+  font-size: 11px;
+  white-space: nowrap;
+}
+.page-heading .eyebrow {
+  font-size: 9px;
+}

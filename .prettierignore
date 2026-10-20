@@ -1,0 +1,15 @@
+.local/
+.desloppify/
+.next/
+node_modules/
+package-lock.json
+AGENTS.md
+IDEA.md
+PLAN.md
+BUILD.md
+TEST_PLAN.md
+DECISIONS.md
+HANDOFF.md
+coverage/
+test-results/
+playwright-report/

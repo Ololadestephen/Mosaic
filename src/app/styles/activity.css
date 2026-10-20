@@ -1,0 +1,129 @@
+.settings-panel {
+  max-width: 650px;
+}
+.activity-search {
+  max-width: 440px;
+  margin-bottom: 25px;
+  font-size: 11px;
+}
+.settings-panel > h2 {
+  font-family: Georgia, serif;
+  font-size: 25px;
+}
+.settings-panel > .muted {
+  font-size: 12px;
+}
+.member-list {
+  margin: 30px 0;
+}
+.member-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--line);
+}
+.member-row > div {
+  flex: 1;
+  min-width: 0;
+}
+.member-row b {
+  font-size: 12px;
+  font-weight: 500;
+}
+.member-row small {
+  font-size: 10px;
+  color: var(--muted);
+  display: block;
+  overflow-wrap: anywhere;
+}
+.pill {
+  background: #eaeee2;
+  border: 1px solid #dce2d0;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 9px;
+  color: #778367;
+}
+.settings-panel form {
+  padding: 28px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 7px;
+}
+.settings-panel form h3 {
+  margin: 0;
+}
+.settings-panel form .muted {
+  font-size: 11px;
+  margin: 0;
+}
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+.activity-list article {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 23px;
+}
+.activity-list article > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.activity-list b {
+  font-size: 11px;
+  font-weight: 500;
+}
+.activity-list time {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--muted);
+}
+.activity-list p {
+  font-size: 12px;
+  margin: 14px 0;
+}
+.activity-list details {
+  font-size: 11px;
+  color: var(--muted);
+}
+.activity-list summary {
+  cursor: pointer;
+  min-height: 28px;
+}
+.decisions {
+  margin-top: 35px;
+}
+.decisions h2 {
+  font-family: Georgia, serif;
+  font-size: 24px;
+}
+.decisions article {
+  padding: 20px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  margin: 10px 0;
+}
+.decisions article p {
+  font-size: 12px;
+  margin: 10px 0 0;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
