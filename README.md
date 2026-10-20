@@ -2,7 +2,7 @@
 
 Mosaic keeps team work aligned with changing information. Bring a text brief, review cited proposals, apply selected changes, verify persistence, and undo eligible changes while protecting later edits.
 
-This is a local application. It has password-based accounts, isolated workspaces, owner/editor/viewer access, a task board, immutable source revisions, private source derivatives, proposal review, an execution journal and field-aware undo. A server-side Gemini Developer API adapter is implemented. Successful live interpretation has not yet been validated. Automated model tests use explicitly labelled fixtures and mocked HTTP; they do not establish live AI accuracy.
+This is an early application, hosted at [Mosaic](https://mosaic-chi-one.vercel.app). It has password-based accounts, isolated workspaces, owner/editor/viewer access, a task board, immutable source revisions, private source derivatives, proposal review, an execution journal and field-aware undo. A server-side Gemini Developer API adapter is implemented. Hosted AI is disabled, and successful live interpretation has not yet been validated. Automated model tests use explicitly labelled fixtures and mocked HTTP; they do not establish live AI accuracy.
 
 ## Run locally
 
@@ -47,7 +47,7 @@ The core mutable task fields are status, assignee and date. Completed tasks are 
 
 Use `npm run db:backup` for a consistent logical backup under the ignored local backup directory. Backups contain private account/workspace data and exclude sessions. Restore is tested against a fresh, empty PostgreSQL database with matching migration hashes; the included restore function refuses existing data and requires a target name ending in `_restore_test`. Hosted backup operations are not configured.
 
-`/api/health` reports database/migration readiness and the build commit without returning workspace data. Source packages and standalone builds are checked for internal documents, local data, secrets files and generated evidence. Keep the supplied ignore rules. No hosting, external database, TestSprite integration or public judge environment has been configured.
+`/api/health` reports database/migration readiness and the build commit without returning workspace data. Source packages and standalone builds are checked for internal documents, local data, secrets files and generated evidence. Keep the supplied ignore rules. Hosting uses Vercel and pooled Neon PostgreSQL with a restricted runtime role and certificate-verified TLS. TestSprite and public judge access are not configured yet.
 
 ## Publication and deployment checks
 
@@ -55,7 +55,7 @@ Run `npm run check:publication` before staging or publishing. It inspects tracke
 
 The prepared GitHub workflow runs static/unit checks, real disposable PostgreSQL tests and labelled browser fixtures, with no provider keys or repository secrets. It uploads no private test reports. These are deterministic checks, not live AI evidence. Fork PRs must never receive hosted database, deployment or TestSprite credentials; do not use privileged `pull_request_target` execution for their code.
 
-`vercel.json` leaves automatic deployments disabled. After separate hosting authorization, configure the database and exact HTTPS origin, apply migrations with a separate migrator, provision restricted synthetic accounts, and keep registration closed. Vercel previews derive their origin from `VERCEL_URL` when `APP_ORIGIN` is unset and reject live AI credentials. Provision a separate database branch per preview from synthetic-only data, never production records. Credentials and provider integrations belong in the hosting secret store.
+`vercel.json` permits automatic deployments from `main` only. A trusted preview branch must be provisioned with its own database and branch-specific secrets before enabling its deployments. Configure `ALLOW_REGISTRATION=false` in protected hosting settings; production registration is operator-controlled, and previews enforce closed registration. Apply migrations with a separate migrator and provision restricted synthetic accounts. Vercel previews derive their origin from `VERCEL_URL` when `APP_ORIGIN` is unset and reject live AI credentials. Provision each preview from a separate synthetic-only project, never production records. Credentials belong in the hosting secret store; no provider key is installed on the host.
 
 The Dockerfile offers a standalone non-root runtime and a separate `migrate` target. Inject `DATABASE_URL` at runtime; supply the exact HTTPS `APP_ORIGIN`. For traceable builds pass `--build-arg MOSAIC_BUILD_COMMIT=<full-sha>`. Container builds and hosted operation require target-platform validation.
 

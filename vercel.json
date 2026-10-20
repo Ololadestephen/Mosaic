@@ -3,9 +3,14 @@
   "framework": "nextjs",
   "installCommand": "npm ci",
   "buildCommand": "npm run build",
-  "git": { "deploymentEnabled": false },
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "codex/hosted-preview-security-tests": true,
+      "*": false
+    }
+  },
   "env": {
-    "AI_ENABLED": "false",
-    "ALLOW_REGISTRATION": "false"
+    "AI_ENABLED": "false"
   }
 }
