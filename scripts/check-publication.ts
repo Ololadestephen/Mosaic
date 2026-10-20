@@ -79,8 +79,6 @@ const patterns = [
   /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/,
   /(?:ghp|github_pat)_[A-Za-z0-9_]{20,}/,
 ];
-// This exact, nonfunctional literal exercises redaction; do not exempt test files.
-const syntheticCredential = "AIzaFakeCredential123456789012345678901";
 let localEnvironment = "";
 try {
   localEnvironment = readFileSync(".env.local", "utf8");
@@ -102,8 +100,7 @@ const configuredSecrets = secretNames.flatMap((name) => {
 function inspectContent(path: string, content: string) {
   if (configuredSecrets.some((secret) => content.includes(secret)))
     throw new Error(`Configured secret found in ${path}; value withheld.`);
-  const withoutSynthetic = content.replaceAll(syntheticCredential, "");
-  if (patterns.some((pattern) => pattern.test(withoutSynthetic)))
+  if (patterns.some((pattern) => pattern.test(content)))
     throw new Error(`Credential-like content in ${path}; value withheld.`);
 }
 for (const path of candidates) {
