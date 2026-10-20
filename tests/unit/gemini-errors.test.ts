@@ -49,7 +49,8 @@ describe("redacted Gemini rejection diagnostics (no live HTTP)", () => {
     expect(JSON.stringify(detail)).not.toContain("never retained");
   });
   it("redacts keys and full or fragmentary source echoes before truncation", () => {
-    const key = "AIzaFakeCredential123456789012345678901";
+    // Build an unmistakably synthetic key shape without publishing a key literal.
+    const key = "AIza" + "FakeCredential" + "123456789012345678901";
     const body = JSON.stringify({
       contents: [
         {
