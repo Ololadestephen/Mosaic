@@ -1,0 +1,116 @@
+name: TestSprite PR preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: testsprite-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  testsprite:
+    name: TestSprite PR preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      PREVIEW_ORIGIN: https://mosaic-git-codex-hosted-previe-7f5fea-ololade-stephens-projects.vercel.app
+      TESTSPRITE_PROJECT_ID: 680e00a5-896c-4d71-915e-c630602fdb8b
+      TESTSPRITE_AUTH_ID: c25b68c7-d243-4349-a923-136abe12f44a
+      TESTSPRITE_MANUAL_ID: dee97bb1-6af8-4fa9-9860-a17c5e8c2685
+      TESTSPRITE_GUARD_ID: f3839677-1ace-4fec-b0b5-a77f2a4f952c
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Capture exact head
+        id: head
+        run: echo "sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for exact preview
+        env:
+          BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          SHA: ${{ steps.head.outputs.sha }}
+        run: |
+          set -euo pipefail
+          endpoint="${PREVIEW_ORIGIN}/api/health?x-vercel-protection-bypass=${BYPASS}"
+          for attempt in $(seq 1 60); do
+            commit="$(curl -fsS "$endpoint" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("commit",""))' 2>/dev/null || true)"
+            if [ "$commit" = "$SHA" ]; then
+              echo "Preview reached $SHA"
+              exit 0
+            fi
+            echo "Waiting for preview ($attempt/60): ${commit:-unavailable}"
+            sleep 10
+          done
+          echo "Preview did not reach $SHA" >&2
+          exit 1
+
+      - name: Prepare TestSprite CLI
+        env:
+          TESTSPRITE_API_KEY: ${{ secrets.TESTSPRITE_API_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$HOME/.testsprite"
+          chmod 700 "$HOME/.testsprite"
+          printf '[default]\napi_key = %s\napi_url = https://api.testsprite.com\n' "$TESTSPRITE_API_KEY" > "$HOME/.testsprite/credentials"
+          chmod 600 "$HOME/.testsprite/credentials"
+
+      - name: Run required TestSprite cases
+        env:
+          BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          SHA: ${{ steps.head.outputs.sha }}
+        run: |
+          set -uo pipefail
+          target="${PREVIEW_ORIGIN}/?x-vercel-protection-bypass=${BYPASS}&x-vercel-set-bypass-cookie=true&expected_sha=${SHA}"
+          status=0
+          : > testsprite-summary.txt
+          for id in "$TESTSPRITE_AUTH_ID" "$TESTSPRITE_MANUAL_ID" "$TESTSPRITE_GUARD_ID"; do
+            echo "::group::TestSprite $id"
+            if npx -y @testsprite/testsprite-cli@0.2.0 --output json test run "$id" --wait --timeout 900 --target-url "$target" --idempotency-key "mosaic-pr-${SHA}-${GITHUB_RUN_ID}-${id}" > "testsprite-run-${id}.json"; then
+              echo "$id passed" | tee -a testsprite-summary.txt
+            else
+              code=$?
+              echo "$id failed (exit $code)" | tee -a testsprite-summary.txt
+              status=1
+            fi
+            echo "::endgroup::"
+          done
+          python3 - <<'PY'
+          import glob,json,re
+          runs=[]
+          for path in glob.glob('testsprite-run-*.json'):
+              try:
+                  data=json.load(open(path))
+              except Exception:
+                  continue
+              run=data.get('run',data)
+              runs.append({
+                  'runId':run.get('runId'),
+                  'testId':run.get('testId'),
+                  'testTitle':run.get('testTitle'),
+                  'status':run.get('status'),
+                  'failureKind':run.get('failureKind'),
+                  'error':re.sub(r'(x-vercel-protection-bypass=)[^&\s]+', r'\1[redacted]', run.get('error') or ''),
+              })
+          print(json.dumps(runs,indent=2))
+          open('testsprite-summary.json','w').write(json.dumps(runs,indent=2)+'\n')
+          PY
+          exit $status
+
+      - name: Upload sanitized evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testsprite-pr-${{ steps.head.outputs.sha }}
+          path: |
+            testsprite-summary.txt
+            testsprite-summary.json
+          if-no-files-found: ignore
