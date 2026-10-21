@@ -13,6 +13,15 @@ const environment = z.object({
   APP_ORIGIN: z.url().default("http://localhost:3000"),
   ALLOW_REGISTRATION: z.enum(["true", "false"]).default("true"),
   AI_ENABLED: z.enum(["true", "false"]).default("false"),
+  // Empty allowlist denies all hosted production analysis; UUIDs are server-only.
+  AI_ALLOWED_ACCOUNT_IDS: z
+    .string()
+    .default("")
+    .transform((value) => (value ? value.split(",") : []))
+    .pipe(z.array(z.uuid())),
+  AI_ACCOUNT_TOTAL_CALL_LIMIT: z.coerce.number().int().min(1).max(2).default(1),
+  // Separate new hosted authorization; never replaces the exhausted diagnostic cap.
+  GEMINI_HOSTED_ATTEMPT_LIMIT: z.coerce.number().int().min(0).max(9).default(0),
   AI_PROVIDER: z.enum(["gemini", "openrouter"]).default("gemini"),
   GEMINI_API_KEY: z.string().default(""),
   GEMINI_MODEL: z

@@ -7,6 +7,7 @@ import { listPassageReviews } from "./passage-signals";
 import { listTasks } from "./tasks";
 import { listSources } from "./sources";
 import { listMembers, listWorkspaces } from "./workspaces";
+import { analysisAccessAllowed } from "./ai/analysis-access";
 import { analysisProvider } from "./ai/provider";
 
 export async function workspaceData(actor: Actor, workspaceId: string) {
@@ -45,7 +46,7 @@ export async function workspaceData(actor: Actor, workspaceId: string) {
     members,
     workspaces,
     ...extra,
-    aiEnabled: provider.enabled,
+    aiEnabled: provider.enabled && analysisAccessAllowed(actor),
     aiProvider: provider.name,
     aiModel: provider.model,
   };
