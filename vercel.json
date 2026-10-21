@@ -9,8 +9,5 @@
       "codex/hosted-preview-security-tests": true,
       "*": false
     }
-  },
-  "env": {
-    "AI_ENABLED": "false"
   }
 }
