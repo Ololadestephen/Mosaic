@@ -25,14 +25,19 @@ const undoOutcome = z.object({
   outcome: z.enum(["restored", "conflict"]),
   detail: z.string(),
 });
-const batchResult = z.object({
+
+export const account = z.object({
+  id: idValue,
+  email: z.string(),
+  name: z.string(),
+});
+export const batchResult = z.object({
   batchId: idValue,
   taskIds: z.array(idValue),
   count: z.number().int().nonnegative(),
   verification: z.enum(["verified", "pending"]),
   outcomes: z.array(undoOutcome).optional(),
 });
-
 export const workspaceList = z.array(
   z.object({
     id: idValue,
@@ -81,7 +86,7 @@ export const workspacePayload = z.object({
       operation: z.string(),
       actorName: z.string(),
       createdAt: z.string(),
-      result: z.record(z.string(), z.unknown()),
+      result: batchResult,
       changes: z.array(fieldChange),
       targetBatchId: idValue.nullable(),
       changeSetId: idValue.nullable(),
@@ -213,4 +218,11 @@ export const undoPreview = z.object({
   alreadyUndone: z.boolean(),
   outcomes: z.array(undoOutcome),
 });
-export { batchResult };
+
+export type Account = z.infer<typeof account>;
+export type BatchResult = z.infer<typeof batchResult>;
+export type WorkspaceData = z.infer<typeof workspacePayload>;
+export type TaskDetail = z.infer<typeof taskDetail>;
+export type SourceDetail = z.infer<typeof sourceDetail>;
+export type Proposal = z.infer<typeof proposalDetail>;
+export type UndoPreview = z.infer<typeof undoPreview>;

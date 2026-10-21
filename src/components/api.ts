@@ -36,7 +36,13 @@ export async function api<T>(
     },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
-  const data: unknown = await response.json();
+  const text = await response.text();
+  let data: unknown;
+  try {
+    data = text ? JSON.parse(text) : undefined;
+  } catch {
+    data = undefined;
+  }
   if (!response.ok) {
     const failure = failureBody.safeParse(data);
     throw new ApiError(
@@ -45,7 +51,9 @@ export async function api<T>(
         : "Request failed.",
       response.status,
       failure.success ? (failure.data.code ?? "UNAVAILABLE") : "UNAVAILABLE",
-      failure.success ? failure.data.requestId : undefined,
+      failure.success
+        ? failure.data.requestId
+        : (response.headers.get("x-request-id") ?? undefined),
     );
   }
   return schema.parse(data);

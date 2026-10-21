@@ -1,13 +1,5 @@
 import { z } from "zod";
-import type {
-  BatchResult,
-  getProposal,
-  getSource,
-  getTask,
-  previewCompensation,
-  WorkspaceData,
-} from "@/client/types";
-import { api } from "./api";
+import type { BatchResult } from "@/domain/api";
 import {
   batchResult,
   proposalDetail,
@@ -16,7 +8,8 @@ import {
   undoPreview,
   workspaceList,
   workspacePayload,
-} from "./responses";
+} from "@/domain/api";
+import { api } from "./api";
 
 const idRecord = z.object({ id: z.string() }).catchall(z.unknown());
 
@@ -29,11 +22,7 @@ export function createWorkspace(body: unknown) {
 }
 
 export function loadWorkspace(workspaceId: string) {
-  // JSON arrays are not postgres row lists; the schema checks the fields first.
-  return api(
-    `workspaces/${workspaceId}`,
-    workspacePayload,
-  ) as Promise<WorkspaceData>;
+  return api(`workspaces/${workspaceId}`, workspacePayload);
 }
 
 export function saveMember(workspaceId: string, body: unknown) {
@@ -46,18 +35,20 @@ export function saveMember(workspaceId: string, body: unknown) {
 }
 
 export function loadSource(workspaceId: string, sourceId: string) {
-  return api(
-    `workspaces/${workspaceId}/sources/${sourceId}`,
-    sourceDetail,
-  ) as Promise<Awaited<ReturnType<typeof getSource>>>;
+  return api(`workspaces/${workspaceId}/sources/${sourceId}`, sourceDetail);
 }
 
-export function createSource(workspaceId: string, body: unknown) {
+export function createSource(
+  workspaceId: string,
+  body: unknown,
+  operationKey: string,
+) {
   return api(
     `workspaces/${workspaceId}/sources`,
-    z.object({ sourceId: z.string() }),
+    z.object({ sourceId: z.string(), versionId: z.string() }),
     "POST",
     body,
+    operationKey,
   );
 }
 
@@ -79,10 +70,7 @@ export function analyzeSource(workspaceId: string, body: unknown) {
 }
 
 export function loadTask(workspaceId: string, taskId: string) {
-  return api(
-    `workspaces/${workspaceId}/tasks/${taskId}`,
-    taskDetail,
-  ) as Promise<Awaited<ReturnType<typeof getTask>>>;
+  return api(`workspaces/${workspaceId}/tasks/${taskId}`, taskDetail);
 }
 
 export function createTask(
@@ -118,7 +106,7 @@ export function loadProposal(workspaceId: string, changeSetId: string) {
   return api(
     `workspaces/${workspaceId}/changes/${changeSetId}`,
     proposalDetail,
-  ) as Promise<Awaited<ReturnType<typeof getProposal>>>;
+  );
 }
 
 export function editProposal(
@@ -137,16 +125,24 @@ export function editProposal(
 export function applyProposal(
   workspaceId: string,
   body: unknown,
-): Promise<BatchResult> {
-  return api(`workspaces/${workspaceId}/apply`, batchResult, "POST", body);
-}
-
-export function lookupApply(
-  workspaceId: string,
   operationKey: string,
 ): Promise<BatchResult> {
   return api(
-    `workspaces/${workspaceId}/operations/apply/${operationKey}`,
+    `workspaces/${workspaceId}/apply`,
+    batchResult,
+    "POST",
+    body,
+    operationKey,
+  );
+}
+
+export function lookupOperation(
+  workspaceId: string,
+  operation: string,
+  operationKey: string,
+): Promise<BatchResult> {
+  return api(
+    `workspaces/${workspaceId}/operations/${operation}/${operationKey}`,
     batchResult,
   );
 }
@@ -155,11 +151,21 @@ export function previewUndo(workspaceId: string, batchId: string) {
   return api(
     `workspaces/${workspaceId}/batches/${batchId}/preview`,
     undoPreview,
-  ) as Promise<Awaited<ReturnType<typeof previewCompensation>>>;
+  );
 }
 
-export function undoBatch(workspaceId: string, body: unknown) {
-  return api(`workspaces/${workspaceId}/undo`, batchResult, "POST", body);
+export function undoBatch(
+  workspaceId: string,
+  body: unknown,
+  operationKey: string,
+) {
+  return api(
+    `workspaces/${workspaceId}/undo`,
+    batchResult,
+    "POST",
+    body,
+    operationKey,
+  );
 }
 
 export function signIn(register: boolean, body: unknown) {

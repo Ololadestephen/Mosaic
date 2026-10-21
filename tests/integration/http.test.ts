@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { prepareDatabase, account } from "./helpers";
+import { randomUUID } from "node:crypto";
+import { prepareDatabase, account, workspace } from "./helpers";
 import { handleRequest } from "@/server/http";
 import { GET as health } from "@/app/api/health/route";
 import { GET as route } from "@/app/api/[...path]/route";
@@ -54,5 +55,36 @@ describe("http shell", () => {
     await expect(session.json()).resolves.toMatchObject({
       id: owner.account.id,
     });
+  });
+
+  it("replays a source creation sent with the same operation header", async () => {
+    const owner = await workspace();
+    jar.value.set(sessionCookie, owner.token);
+    const key = randomUUID();
+    const send = () =>
+      handleRequest(
+        new Request(
+          `http://localhost:3000/api/workspaces/${owner.workspaceId}/sources`,
+          {
+            method: "POST",
+            headers: {
+              origin: "http://localhost:3000",
+              "content-type": "application/json",
+              "x-operation-key": key,
+            },
+            body: JSON.stringify({
+              title: "Idempotent source",
+              text: "One saved source",
+            }),
+          },
+        ),
+        ["workspaces", owner.workspaceId, "sources"],
+      );
+    const first = await send();
+    expect(first.status).toBe(200);
+    const created = await first.json();
+    const second = await send();
+    expect(second.status).toBe(200);
+    await expect(second.json()).resolves.toEqual(created);
   });
 });

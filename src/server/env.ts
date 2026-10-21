@@ -56,6 +56,17 @@ const environment = z.object({
   AI_OUTPUT_USD_PER_MILLION: z.coerce.number().min(0).max(1000).default(0),
 });
 
+export function registrationOpen() {
+  const parsed = z
+    .enum(["true", "false"])
+    .safeParse(process.env.ALLOW_REGISTRATION ?? "true");
+  return (
+    process.env.VERCEL_ENV !== "preview" &&
+    parsed.success &&
+    parsed.data === "true"
+  );
+}
+
 export function env() {
   const origin =
     process.env.APP_ORIGIN ??

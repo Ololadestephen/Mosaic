@@ -3,13 +3,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PASSAGE_REVIEW_LABEL } from "@/domain/sources/passage-change";
-import type { getSource } from "@/client/types";
+import type { SourceDetail } from "@/client/types";
 import { addRevision, analyzeSource, loadSource } from "../commands";
 import { Dialog } from "../dialog";
 import { SourcePassage } from "./source-passage";
 import { RevisionComparison } from "./revision-comparison";
-
-type SourceDetail = Awaited<ReturnType<typeof getSource>>;
 export function SourceDetailView({
   workspaceId,
   sourceId,
@@ -83,11 +81,17 @@ export function SourceDetailView({
   }
   async function analyze() {
     if (!source) return;
+    if (selected && selected !== source.latestVersionId) {
+      setError(
+        "Only the latest revision can be analyzed. Select the latest revision and try again.",
+      );
+      return;
+    }
     setBusy(true);
     setError("");
     try {
       const draft = await analyzeSource(workspaceId, {
-        sourceVersionId: selected || source.latestVersionId,
+        sourceVersionId: source.latestVersionId,
       });
       router.push(`/app/changes/${draft.id}`);
     } catch (error) {
@@ -115,6 +119,7 @@ export function SourceDetailView({
   const version =
     source.versions.find((version) => version.id === selected) ??
     source.versions[0];
+  const isLatest = version.id === source.latestVersionId;
   const predecessor = source.versions.find(
     (entry) => entry.id === version.predecessorId,
   );
@@ -190,13 +195,23 @@ export function SourceDetailView({
             <button
               className="primary"
               onClick={analyze}
-              disabled={!aiEnabled || busy}
+              disabled={!aiEnabled || busy || !isLatest}
             >
-              {busy ? "Analyzing source…" : "Analyze this revision ↗"}
+              {busy
+                ? "Analyzing source…"
+                : isLatest
+                  ? "Analyze this revision ↗"
+                  : "Select the latest revision to analyze"}
             </button>
           )
         )}
       </div>
+      {!isLatest && (
+        <p className="notice">
+          This is a historical revision. You can read it and follow its
+          citations, but only the latest revision can be analyzed.
+        </p>
+      )}
       {run && !draft && (
         <p className="notice" role="status">
           {run.status === "running"

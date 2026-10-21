@@ -5,7 +5,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "./commands";
 
-export function AuthForm({ initialRegister }: { initialRegister: boolean }) {
+export function AuthForm({
+  initialRegister,
+  registrationOpen,
+}: {
+  initialRegister: boolean;
+  registrationOpen: boolean;
+}) {
   const router = useRouter();
   const [register, setRegister] = useState(initialRegister);
   const [error, setError] = useState("");
@@ -85,17 +91,19 @@ export function AuthForm({ initialRegister }: { initialRegister: boolean }) {
             {busy ? "Please wait…" : register ? "Create account" : "Sign in"}
           </button>
         </form>
-        <button
-          className="text-button"
-          onClick={() => {
-            setRegister(!register);
-            setError("");
-          }}
-        >
-          {register
-            ? "Already have an account? Sign in"
-            : "New here? Create an account"}
-        </button>
+        {registrationOpen && (
+          <button
+            className="text-button"
+            onClick={() => {
+              setRegister(!register);
+              setError("");
+            }}
+          >
+            {register
+              ? "Already have an account? Sign in"
+              : "New here? Create an account"}
+          </button>
+        )}
         <p className="disclosure">
           Sources are stored in your workspace. Live AI, when enabled, sends the
           selected source and visible task context to the configured AI

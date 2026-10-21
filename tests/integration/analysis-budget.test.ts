@@ -9,7 +9,7 @@ import {
 } from "vitest";
 import { prepareDatabase, workspace } from "./helpers";
 import { closeDatabase, db } from "@/server/db/client";
-import { createSource } from "@/server/sources";
+import { addRevision, createSource } from "@/server/sources";
 import { analyzeSource } from "@/server/ai/analyze";
 
 beforeAll(prepareDatabase);
@@ -31,6 +31,30 @@ function enableTestProvider() {
 }
 
 describe("real database reservations with mocked provider HTTP", () => {
+  it("rejects a historical revision before reserving or calling the provider", async () => {
+    const owner = await workspace();
+    const source = await createSource(owner.actor, owner.workspaceId, {
+      title: "Revision test",
+      text: "First brief",
+    });
+    await addRevision(owner.actor, owner.workspaceId, source.sourceId, {
+      predecessorId: source.versionId,
+      text: "Second brief",
+    });
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    await expect(
+      analyzeSource(owner.actor, owner.workspaceId, {
+        sourceVersionId: source.versionId,
+      }),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    expect(fetch).not.toHaveBeenCalled();
+    expect(
+      (
+        await db()`SELECT id FROM analysis_runs WHERE workspace_id = ${owner.workspaceId}`
+      ).length,
+    ).toBe(0);
+  });
   it("serializes duplicate analysis, persists the draft, and reuses it without paying twice", async () => {
     enableTestProvider();
     const owner = await workspace();

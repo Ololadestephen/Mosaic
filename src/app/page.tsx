@@ -1,6 +1,10 @@
 import Link from "next/link";
+import { registrationOpen } from "@/server/env";
+
+export const dynamic = "force-dynamic";
 
 export default function Home() {
+  const canRegister = registrationOpen();
   return (
     <main className="entry-page">
       <header className="entry-header">
@@ -28,10 +32,18 @@ export default function Home() {
           Turn a changing brief into a considered next step. See what needs to
           change, know why, and keep the work that still matters.
         </p>
-        <Link className="button primary" href="/login?mode=register">
-          Create your workspace <span aria-hidden="true">↗</span>
+        <Link
+          className="button primary"
+          href={canRegister ? "/login?mode=register" : "/login"}
+        >
+          {canRegister ? "Create your workspace" : "Sign in to your workspace"}{" "}
+          <span aria-hidden="true">↗</span>
         </Link>
-        <p className="quiet">Your sources. Your review. Your call.</p>
+        <p className="quiet">
+          {canRegister
+            ? "Your sources. Your review. Your call."
+            : "Access is limited to approved workspaces."}
+        </p>
         <div className="lifecycle" aria-label="Mosaic workflow">
           <span>
             <b>01</b> Bring a source

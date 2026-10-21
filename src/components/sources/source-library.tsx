@@ -70,17 +70,22 @@ export function NewSource({
   const [text, setText] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [key] = useState(() => crypto.randomUUID());
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     setBusy(true);
     setError("");
     try {
-      const result = await createSource(workspaceId, {
-        title,
-        text,
-        visibility: data.get("visibility"),
-      });
+      const result = await createSource(
+        workspaceId,
+        {
+          title,
+          text,
+          visibility: data.get("visibility"),
+        },
+        key,
+      );
       await onSaved(result.sourceId);
       onClose();
     } catch (error) {

@@ -33,6 +33,16 @@ function notFound(): never {
   throw new DomainError("NOT_FOUND", "Route not found.");
 }
 
+function operationKey(request: Request) {
+  return id.parse(request.headers.get("x-operation-key"));
+}
+
+function withOperationKey(body: unknown, key: string) {
+  return body && typeof body === "object" && !Array.isArray(body)
+    ? { ...body, operationKey: key }
+    : body;
+}
+
 const commands: Command[] = [
   async (request, path, actor) => {
     if (path.length !== 1) return unmatched();
@@ -73,14 +83,20 @@ const commands: Command[] = [
   },
   async (request, path, actor, workspaceId) => {
     if (path[2] !== "apply" || request.method !== "POST") return unmatched();
-    const body = await readBody(request);
+    const body = withOperationKey(
+      await readBody(request),
+      operationKey(request),
+    );
     return verifiedWrite(actor, workspaceId, () =>
       applyProposal(actor, workspaceId, body),
     );
   },
   async (request, path, actor, workspaceId) => {
     if (path[2] !== "undo" || request.method !== "POST") return unmatched();
-    const body = await readBody(request);
+    const body = withOperationKey(
+      await readBody(request),
+      operationKey(request),
+    );
     return verifiedWrite(actor, workspaceId, () =>
       compensate(actor, workspaceId, body),
     );
@@ -99,7 +115,12 @@ const commands: Command[] = [
   async (request, path, actor, workspaceId) => {
     if (path[2] !== "sources") return unmatched();
     if (path.length === 3 && request.method === "POST")
-      return createSource(actor, workspaceId, await readBody(request));
+      return createSource(
+        actor,
+        workspaceId,
+        await readBody(request),
+        operationKey(request),
+      );
     if (request.method === "GET")
       return getSource(actor, workspaceId, id.parse(path[3]));
     if (path[4] === "revisions" && request.method === "POST")
@@ -115,15 +136,15 @@ const commands: Command[] = [
     if (path[2] !== "tasks") return unmatched();
     if (request.method === "GET")
       return getTask(actor, workspaceId, id.parse(path[3]));
-    const operationKey = id.parse(request.headers.get("x-operation-key"));
+    const key = operationKey(request);
     const body = await readBody(request);
     if (path.length === 3 && request.method === "POST")
       return verifiedWrite(actor, workspaceId, () =>
-        createTask(actor, workspaceId, body, operationKey),
+        createTask(actor, workspaceId, body, key),
       );
     if (request.method === "PATCH")
       return verifiedWrite(actor, workspaceId, () =>
-        editTask(actor, workspaceId, id.parse(path[3]), body, operationKey),
+        editTask(actor, workspaceId, id.parse(path[3]), body, key),
       );
     notFound();
   },

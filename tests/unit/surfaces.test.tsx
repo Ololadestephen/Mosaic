@@ -62,6 +62,17 @@ describe("rendered surfaces", () => {
     expect(clear).not.toContain("Confirm the supplier");
   });
 
+  it("does not advertise registration when the workspace is closed", () => {
+    vi.stubEnv("ALLOW_REGISTRATION", "false");
+    try {
+      const home = renderToStaticMarkup(createElement(Home));
+      expect(home).not.toContain("Create your workspace");
+      expect(home).toContain("Sign in to your workspace");
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it("renders the entry, sign-in, and empty workspace states", () => {
     expect(renderToStaticMarkup(createElement(Home))).toContain(
       "Keep work in sync",
@@ -72,8 +83,21 @@ describe("rendered surfaces", () => {
       ),
     ).toContain("Inside");
     expect(
-      renderToStaticMarkup(createElement(AuthForm, { initialRegister: false })),
+      renderToStaticMarkup(
+        createElement(AuthForm, {
+          initialRegister: false,
+          registrationOpen: true,
+        }),
+      ),
     ).toContain("Welcome back.");
+    expect(
+      renderToStaticMarkup(
+        createElement(AuthForm, {
+          initialRegister: false,
+          registrationOpen: false,
+        }),
+      ),
+    ).not.toContain("New here? Create an account");
     expect(
       renderToStaticMarkup(
         <Dialog title="Details" onClose={() => undefined}>

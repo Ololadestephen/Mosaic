@@ -2,11 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import type {
-  previewCompensation,
-  StoredBatch,
-  WorkspaceData,
-} from "@/client/types";
+import type { BatchResult, UndoPreview, WorkspaceData } from "@/client/types";
 import { Dialog } from "./dialog";
 import { previewUndo, undoBatch } from "./commands";
 
@@ -22,10 +18,8 @@ export function Activity({
   onSaved: () => Promise<void>;
 }) {
   const [target, setTarget] = useState<string | null>(null);
-  const [preview, setPreview] = useState<Awaited<
-    ReturnType<typeof previewCompensation>
-  > | null>(null);
-  const [result, setResult] = useState<StoredBatch["result"] | null>(null);
+  const [preview, setPreview] = useState<UndoPreview | null>(null);
+  const [result, setResult] = useState<BatchResult | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [key, setKey] = useState(() => crypto.randomUUID());
@@ -53,12 +47,7 @@ export function Activity({
     setBusy(true);
     setError("");
     try {
-      setResult(
-        await undoBatch(workspaceId, {
-          batchId: target,
-          operationKey: key,
-        }),
-      );
+      setResult(await undoBatch(workspaceId, { batchId: target }, key));
       await onSaved();
     } catch (error) {
       setError(
