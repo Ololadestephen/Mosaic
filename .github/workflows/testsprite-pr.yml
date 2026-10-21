@@ -4,12 +4,18 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Commit SHA to test (defaults to the selected ref)
+        required: false
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: testsprite-pr-${{ github.event.pull_request.number }}
+  group: testsprite-pr-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -31,7 +37,7 @@ jobs:
 
       - name: Capture exact head
         id: head
-        run: echo "sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+        run: echo "sha=${{ github.event.pull_request.head.sha || inputs.sha || github.sha }}" >> "$GITHUB_OUTPUT"
 
       - name: Wait for exact preview
         env:
