@@ -87,4 +87,31 @@ describe("http shell", () => {
     expect(second.status).toBe(200);
     await expect(second.json()).resolves.toEqual(created);
   });
+
+  it("accepts a source creation without an operation header", async () => {
+    const owner = await workspace();
+    jar.value.set(sessionCookie, owner.token);
+    const response = await handleRequest(
+      new Request(
+        `http://localhost:3000/api/workspaces/${owner.workspaceId}/sources`,
+        {
+          method: "POST",
+          headers: {
+            origin: "http://localhost:3000",
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            title: "Unkeyed source",
+            text: "Saved without an operation header",
+          }),
+        },
+      ),
+      ["workspaces", owner.workspaceId, "sources"],
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      sourceId: expect.any(String),
+      versionId: expect.any(String),
+    });
+  });
 });

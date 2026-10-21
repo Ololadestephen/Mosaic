@@ -114,13 +114,15 @@ const commands: Command[] = [
   },
   async (request, path, actor, workspaceId) => {
     if (path[2] !== "sources") return unmatched();
-    if (path.length === 3 && request.method === "POST")
+    if (path.length === 3 && request.method === "POST") {
+      const key = request.headers.get("x-operation-key");
       return createSource(
         actor,
         workspaceId,
         await readBody(request),
-        operationKey(request),
+        key ? id.parse(key) : undefined,
       );
+    }
     if (request.method === "GET")
       return getSource(actor, workspaceId, id.parse(path[3]));
     if (path[4] === "revisions" && request.method === "POST")
