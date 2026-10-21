@@ -1,16 +1,12 @@
 import "server-only";
 import { z } from "zod";
-import { analysisOutput } from "@/domain/contracts";
+import { geminiTransportOutput } from "./gemini-citations";
 import { DomainError, requireCondition } from "@/domain/errors";
 import { env } from "../env";
 import { geminiErrorDetails, type GeminiErrorDetails } from "./gemini-errors";
 import type { AnalysisContext } from "../reconciliation";
-import {
-  analysisData,
-  encodeRequest,
-  instructions,
-  maxOutputTokens,
-} from "./prompt";
+import { encodeRequest } from "./prompt";
+import { geminiPrompt } from "./gemini-prompt";
 
 const tokenCount = z.number().int().nonnegative();
 export class GeminiHttpError extends DomainError {
@@ -72,47 +68,23 @@ export function geminiAvailable(config = env()) {
   );
 }
 
-// Gemini accepts a JSON Schema subset. Local Zod and evidence validation retain
-// the stricter string/date/identity rules that generation cannot establish.
-function generationSchema(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(generationSchema);
-  if (!value || typeof value !== "object") return value;
-  return Object.fromEntries(
-    Object.entries(value).flatMap(([key, item]) => {
-      if (
-        [
-          "$schema",
-          "pattern",
-          "minLength",
-          "maxLength",
-          "format",
-          "editedBy",
-        ].includes(key)
-      )
-        return [];
-      if (key === "const") return [["enum", [item]]];
-      return [[key, generationSchema(item)]];
-    }),
-  );
-}
-
 export function geminiRequest(context: AnalysisContext) {
+  const config = env();
   return {
     body: encodeRequest({
-      systemInstruction: { parts: [{ text: instructions }] },
       contents: [
         {
-          role: "user",
-          parts: [{ text: JSON.stringify(analysisData(context)) }],
+          parts: [
+            { text: geminiPrompt(context, config.GEMINI_MAX_OUTPUT_TOKENS) },
+          ],
         },
       ],
       generationConfig: {
-        candidateCount: 1,
-        maxOutputTokens,
+        maxOutputTokens: config.GEMINI_MAX_OUTPUT_TOKENS,
         responseMimeType: "application/json",
-        responseJsonSchema: generationSchema(
-          z.toJSONSchema(analysisOutput, { target: "draft-7" }),
-        ),
+        // This model's supported default. MINIMAL is not a thinking-off switch;
+        // thoughts and answer share the configured output ceiling.
+        thinkingConfig: { thinkingLevel: "MINIMAL" },
       },
     }),
     reservedUsd: 0,
@@ -150,6 +122,7 @@ async function boundedResponse(response: Response) {
 export async function callGemini(
   body: string,
   signal?: AbortSignal,
+  captureResponse?: (raw: string) => Promise<void>,
 ): Promise<ProviderResult> {
   const config = env();
   requireCondition(
@@ -160,7 +133,8 @@ export async function callGemini(
   const started = Date.now();
   try {
     const cancellation = AbortSignal.any([
-      AbortSignal.timeout(90_000),
+      // Leave time for validation and persistence within the route's 60s limit.
+      AbortSignal.timeout(55_000),
       ...(signal ? [signal] : []),
     ]);
     cancellation.throwIfAborted();
@@ -192,9 +166,9 @@ export async function callGemini(
       );
       throw new GeminiHttpError(response.status, diagnostic.status, diagnostic);
     }
-    const parsed = completion.parse(
-      JSON.parse(await boundedResponse(response)),
-    );
+    const rawResponse = await boundedResponse(response);
+    await captureResponse?.(rawResponse);
+    const parsed = completion.parse(JSON.parse(rawResponse));
     cancellation.throwIfAborted();
     requireCondition(
       !parsed.promptFeedback?.blockReason,
@@ -205,7 +179,9 @@ export async function callGemini(
     requireCondition(
       parsed.candidates.length === 1 && candidate?.finishReason === "STOP",
       "INVALID_OUTPUT",
-      "Gemini returned blocked, incomplete or truncated output. No proposal was saved.",
+      candidate?.finishReason === "MAX_TOKENS"
+        ? "Gemini exhausted the output token limit (MAX_TOKENS). The incomplete response was rejected; no proposal was saved and no repair call was made."
+        : "Gemini returned blocked or incomplete output. No proposal was saved and no repair call was made.",
     );
     const text =
       candidate.content?.parts
@@ -213,7 +189,7 @@ export async function callGemini(
         .map((p) => p.text ?? "")
         .join("") ?? "";
     return {
-      output: analysisOutput.parse(JSON.parse(text)),
+      output: geminiTransportOutput.parse(JSON.parse(text)),
       usage: parsed.usageMetadata ?? null,
       durationMs: Date.now() - started,
     };
@@ -228,10 +204,12 @@ export async function callGemini(
       error instanceof SyntaxError || error instanceof z.ZodError
         ? "INVALID_OUTPUT"
         : "PROVIDER_FAILED",
-      error instanceof Error &&
-        ["TimeoutError", "AbortError"].includes(error.name)
-        ? "Gemini timed out. No automatic retry was made; your source is saved."
-        : "Gemini returned an unusable response or could not be reached. No proposal was saved.",
+      error instanceof SyntaxError || error instanceof z.ZodError
+        ? "Gemini returned malformed JSON or unsupported proposal fields. No proposal was saved and no repair call was made. Your source is saved."
+        : error instanceof Error &&
+            ["TimeoutError", "AbortError"].includes(error.name)
+          ? "Gemini timed out. No automatic retry was made; your source is saved."
+          : "Gemini returned an unusable response or could not be reached. No proposal was saved.",
     );
   }
 }

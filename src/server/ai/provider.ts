@@ -47,8 +47,10 @@ export function prepareAnalysis(context: AnalysisContext) {
 export async function callProvider(
   request: ReturnType<typeof prepareAnalysis>,
   signal?: AbortSignal,
+  captureResponse?: (raw: string) => Promise<void>,
 ): Promise<ProviderResult> {
-  if (request.provider === "gemini") return callGemini(request.body, signal);
+  if (request.provider === "gemini")
+    return callGemini(request.body, signal, captureResponse);
   const started = Date.now();
   return {
     output: await callOpenRouter(request.body, signal),

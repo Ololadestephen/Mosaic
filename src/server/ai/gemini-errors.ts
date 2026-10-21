@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { geminiContextMarker } from "./gemini-prompt";
 
 const providerError = z.object({
   error: z.object({
@@ -61,7 +62,14 @@ function contentStrings(body: string): string[] {
       for (const part of content.parts) {
         if (!part.text) continue;
         try {
-          const data: unknown = JSON.parse(part.text);
+          // Prompt rules are public technical text; redact only the serialized
+          // untrusted context, retaining useful provider field diagnostics.
+          const offset = part.text.indexOf(geminiContextMarker);
+          const data: unknown = JSON.parse(
+            offset < 0
+              ? part.text
+              : part.text.slice(offset + geminiContextMarker.length),
+          );
           if (data && typeof data === "object") collect(data);
           else values.push(part.text);
         } catch {

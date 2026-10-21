@@ -7,8 +7,8 @@ export async function GET() {
   try {
     const [result] = await db()<
       { count: number }[]
-    >`SELECT count(*)::int AS count FROM schema_migrations WHERE name IN ('001_core.sql', '002_privacy_guards.sql', '003_analysis_provider.sql', '004_provider_errors.sql', '005_provider_error_details.sql')`;
-    if (result.count !== 5) throw new Error("Migration required");
+    >`SELECT count(*)::int AS count FROM schema_migrations WHERE name IN ('001_core.sql', '002_privacy_guards.sql', '003_analysis_provider.sql', '004_provider_errors.sql', '005_provider_error_details.sql', '006_raw_provider_response.sql')`;
+    if (result.count !== 6) throw new Error("Migration required");
     return NextResponse.json(
       {
         status: "ready",

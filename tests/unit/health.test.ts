@@ -9,7 +9,7 @@ afterEach(() => {
 });
 it("reports the build revision only when migrations are ready", async () => {
   vi.stubEnv("MOSAIC_BUILD_COMMIT", "a".repeat(40));
-  query.mockResolvedValue([{ count: 5 }]);
+  query.mockResolvedValue([{ count: 6 }]);
   const ready = await GET();
   expect(ready.status).toBe(200);
   expect(await ready.json()).toEqual({
@@ -18,7 +18,7 @@ it("reports the build revision only when migrations are ready", async () => {
     commit: "a".repeat(40),
   });
   expect(ready.headers.get("cache-control")).toBe("no-store");
-  query.mockResolvedValue([{ count: 4 }]);
+  query.mockResolvedValue([{ count: 5 }]);
   const unavailable = await GET();
   expect(unavailable.status).toBe(503);
   expect(await unavailable.json()).toEqual({ status: "unavailable" });
