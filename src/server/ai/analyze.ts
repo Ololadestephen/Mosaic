@@ -9,6 +9,7 @@ import { env } from "../env";
 import { callProvider, prepareAnalysis } from "./provider";
 import { promptVersion } from "./prompt";
 import { GeminiHttpError, type ProviderResult } from "./gemini";
+import { resolveGeminiOutput } from "./gemini-citations";
 
 export async function analyzeSource(
   actor: Actor,
@@ -87,7 +88,23 @@ export async function analyzeSource(
   const started = Date.now();
   try {
     // Network calls happen outside every database write transaction.
-    const generation = await callProvider(request, signal);
+    const generation = await callProvider(
+      request,
+      signal,
+      async (rawResponse) => {
+        // Keep exact raw HTTP body separate from the resolved proposal, including invalid output.
+        // Persist only after rechecking the original workspace/private-source permission.
+        await inWorkspace(actor, workspaceId, "write", async (tx) => {
+          const rows =
+            await tx`UPDATE analysis_runs SET raw_provider_response=${rawResponse} WHERE id=${runId} AND workspace_id=${workspaceId} AND status='running' RETURNING id`;
+          requireCondition(
+            rows.length === 1,
+            "CONFLICT",
+            "The analysis run was interrupted. No proposal was saved.",
+          );
+        });
+      },
+    );
     response = generation;
     requireCondition(
       !signal?.aborted,
@@ -108,7 +125,9 @@ export async function analyzeSource(
         actor,
         workspaceId,
         context,
-        generation.output,
+        request.provider === "gemini"
+          ? resolveGeminiOutput(generation.output, context.source)
+          : generation.output,
       );
       await tx`UPDATE analysis_runs SET status = 'completed', token_usage = ${generation.usage ? tx.json(generation.usage) : null}, duration_ms = ${generation.durationMs}, completed_at = now() WHERE workspace_id = ${workspaceId} AND id = ${runId}`;
       return result;

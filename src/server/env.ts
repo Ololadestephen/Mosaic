@@ -18,13 +18,21 @@ const environment = z.object({
   GEMINI_MODEL: z
     .literal("gemini-3.5-flash-lite")
     .default("gemini-3.5-flash-lite"),
+  // Application floor prevents inheriting the exhausted 256-token diagnostic
+  // setting; the ceiling is this allowlisted model's documented output limit.
+  GEMINI_MAX_OUTPUT_TOKENS: z.coerce
+    .number()
+    .int()
+    .min(1024)
+    .max(65536)
+    .default(4096),
   GEMINI_FREE_TIER_CONFIRMED: z.enum(["true", "false"]).default("false"),
   GEMINI_VALIDATION_ID: z.union([z.uuid(), z.literal("")]).default(""),
   GEMINI_VALIDATION_CALL_LIMIT: z.coerce
     .number()
     .int()
     .min(1)
-    .max(10)
+    .max(13)
     .default(10),
   OPENROUTER_API_KEY: z.string().default(""),
   OPENROUTER_MODEL: z.string().max(100).default(""),
