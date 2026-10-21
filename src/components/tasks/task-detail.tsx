@@ -4,12 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Task } from "@/domain/contracts";
 import { PASSAGE_REVIEW_LABEL } from "@/domain/sources/passage-change";
-import type { getTask } from "@/client/types";
+import type { TaskDetail } from "@/client/types";
 import { editTask, loadTask } from "../commands";
 import { Dialog } from "../dialog";
 import { TaskFields, type Members } from "./task-board";
-
-type TaskDetail = Awaited<ReturnType<typeof getTask>>;
 
 export function TaskDetailPanel({
   workspaceId,

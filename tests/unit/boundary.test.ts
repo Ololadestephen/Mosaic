@@ -21,6 +21,14 @@ describe("environment", () => {
     expect(env().AI_ENABLED).toBe("false");
     expect(env().APP_ORIGIN).toBe("http://localhost:3000");
   });
+
+  it("accepts the approved ten-attempt hosted ceiling and rejects eleven", () => {
+    vi.stubEnv("DATABASE_URL", "postgresql://local@localhost/mosaic_test");
+    vi.stubEnv("GEMINI_HOSTED_ATTEMPT_LIMIT", "10");
+    expect(env().GEMINI_HOSTED_ATTEMPT_LIMIT).toBe(10);
+    vi.stubEnv("GEMINI_HOSTED_ATTEMPT_LIMIT", "11");
+    expect(() => env()).toThrow(DomainError);
+  });
 });
 
 describe("request body", () => {

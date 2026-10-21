@@ -21,7 +21,12 @@ const environment = z.object({
     .pipe(z.array(z.uuid())),
   AI_ACCOUNT_TOTAL_CALL_LIMIT: z.coerce.number().int().min(1).max(2).default(1),
   // Separate new hosted authorization; never replaces the exhausted diagnostic cap.
-  GEMINI_HOSTED_ATTEMPT_LIMIT: z.coerce.number().int().min(0).max(9).default(0),
+  GEMINI_HOSTED_ATTEMPT_LIMIT: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(10)
+    .default(0),
   AI_PROVIDER: z.enum(["gemini", "openrouter"]).default("gemini"),
   GEMINI_API_KEY: z.string().default(""),
   GEMINI_MODEL: z
@@ -50,6 +55,17 @@ const environment = z.object({
   AI_INPUT_USD_PER_MILLION: z.coerce.number().min(0).max(1000).default(0),
   AI_OUTPUT_USD_PER_MILLION: z.coerce.number().min(0).max(1000).default(0),
 });
+
+export function registrationOpen() {
+  const parsed = z
+    .enum(["true", "false"])
+    .safeParse(process.env.ALLOW_REGISTRATION ?? "true");
+  return (
+    process.env.VERCEL_ENV !== "preview" &&
+    parsed.success &&
+    parsed.data === "true"
+  );
+}
 
 export function env() {
   const origin =

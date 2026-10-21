@@ -97,6 +97,33 @@ describe("real PostgreSQL workspace", () => {
     ).toBe("Launch");
     expect(await listSources(viewer.actor, owner.workspaceId)).toHaveLength(1);
   });
+  it("reuses a source creation for the same operation key and rejects a changed request", async () => {
+    const owner = await workspace();
+    const operationKey = randomUUID();
+    const body = { title: "Launch brief", text: "First brief" };
+    const first = await createSource(
+      owner.actor,
+      owner.workspaceId,
+      body,
+      operationKey,
+    );
+    const retried = await createSource(
+      owner.actor,
+      owner.workspaceId,
+      body,
+      operationKey,
+    );
+    expect(retried).toEqual(first);
+    expect(await listSources(owner.actor, owner.workspaceId)).toHaveLength(1);
+    await expect(
+      createSource(
+        owner.actor,
+        owner.workspaceId,
+        { ...body, title: "Different brief" },
+        operationKey,
+      ),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+  });
   it("deduplicates simultaneous revision requests while allowing a legitimate content reversion", async () => {
     const owner = await workspace();
     const source = await createSource(owner.actor, owner.workspaceId, {

@@ -3,7 +3,7 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { credentials } from "@/domain/contracts";
 import { DomainError, requireCondition } from "@/domain/errors";
 import { db } from "../db/client";
-import { env } from "../env";
+import { registrationOpen } from "../env";
 import { hashPassword, verifyPassword } from "./password";
 
 export const sessionCookie = "mosaic_session";
@@ -34,7 +34,7 @@ export async function signIn(
   let account: Account;
   if (register) {
     requireCondition(
-      env().ALLOW_REGISTRATION === "true",
+      registrationOpen(),
       "FORBIDDEN",
       "Registration is currently closed.",
     );

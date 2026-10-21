@@ -34,6 +34,14 @@ export async function analyzeSource(
         { id: string }[]
       >`SELECT id FROM change_sets WHERE workspace_id = ${workspaceId} AND source_version_id = ${input.sourceVersionId}`;
       if (existing) return { existing };
+      const [latest] = await tx<
+        { id: string }[]
+      >`SELECT id FROM source_versions WHERE workspace_id = ${workspaceId} AND source_id = ${context.source.sourceId} ORDER BY number DESC LIMIT 1`;
+      requireCondition(
+        latest?.id === context.source.id,
+        "CONFLICT",
+        "Only the latest revision can be analyzed. Select the latest revision before trying again.",
+      );
       const config = env();
       requireCondition(
         analysisAccessAllowed(actor, config),

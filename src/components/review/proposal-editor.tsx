@@ -1,10 +1,9 @@
 "use client";
 import { useState } from "react";
 import type { ProposalItem } from "@/domain/contracts";
-import type { getProposal } from "@/client/types";
+import type { Proposal } from "@/client/types";
 import { statusLabels } from "../tasks/task-board";
 import { editProposal } from "../commands";
-type Proposal = Awaited<ReturnType<typeof getProposal>>;
 
 export function EditValue({
   item,
