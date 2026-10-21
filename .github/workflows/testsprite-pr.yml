@@ -29,11 +29,16 @@ jobs:
       TESTSPRITE_AUTH_ID: c25b68c7-d243-4349-a923-136abe12f44a
       TESTSPRITE_MANUAL_ID: dee97bb1-6af8-4fa9-9860-a17c5e8c2685
       TESTSPRITE_GUARD_ID: f3839677-1ace-4fec-b0b5-a77f2a4f952c
+      TESTSPRITE_FIXTURE_ID: cbc840c3-9291-48ff-b8ae-865296076ff3
+      FIXTURE_RUN: ${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      - name: Install deterministic fixture dependencies
+        run: npm ci --ignore-scripts
 
       - name: Capture exact head
         id: head
@@ -58,6 +63,13 @@ jobs:
           echo "Preview did not reach $SHA" >&2
           exit 1
 
+      - name: Seed isolated preview fixture
+        env:
+          DATABASE_URL: ${{ secrets.TESTSPRITE_PREVIEW_DATABASE_URL }}
+          FIXTURE_OWNER_EMAIL: ${{ secrets.TESTSPRITE_FIXTURE_OWNER_EMAIL }}
+          SHA: ${{ steps.head.outputs.sha }}
+        run: npx --no-install tsx scripts/testsprite-fixture.ts
+
       - name: Prepare TestSprite CLI
         env:
           TESTSPRITE_API_KEY: ${{ secrets.TESTSPRITE_API_KEY }}
@@ -76,11 +88,16 @@ jobs:
         run: |
           set -uo pipefail
           target="${PREVIEW_ORIGIN}/?x-vercel-protection-bypass=${BYPASS}&x-vercel-set-bypass-cookie=true&expected_sha=${SHA}"
+          fixture_target="${target}&fixture_run=${FIXTURE_RUN}"
           status=0
           : > testsprite-summary.txt
-          for id in "$TESTSPRITE_AUTH_ID" "$TESTSPRITE_MANUAL_ID" "$TESTSPRITE_GUARD_ID"; do
+          for id in "$TESTSPRITE_AUTH_ID" "$TESTSPRITE_MANUAL_ID" "$TESTSPRITE_GUARD_ID" "$TESTSPRITE_FIXTURE_ID"; do
+            case_target="$target"
+            if [ "$id" = "$TESTSPRITE_FIXTURE_ID" ]; then
+              case_target="$fixture_target"
+            fi
             echo "::group::TestSprite $id"
-            if npx -y @testsprite/testsprite-cli@0.2.0 --output json test run "$id" --wait --timeout 900 --target-url "$target" --idempotency-key "mosaic-pr-${SHA}-${GITHUB_RUN_ID}-${id}" > "testsprite-run-${id}.json"; then
+            if npx -y @testsprite/testsprite-cli@0.2.0 --output json test run "$id" --wait --timeout 900 --target-url "$case_target" --idempotency-key "mosaic-pr-${SHA}-${GITHUB_RUN_ID}-${id}" > "testsprite-run-${id}.json"; then
               echo "$id passed" | tee -a testsprite-summary.txt
             else
               code=$?
