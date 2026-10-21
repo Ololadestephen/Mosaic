@@ -9,6 +9,7 @@ import { env } from "../env";
 import { callProvider, prepareAnalysis } from "./provider";
 import { promptVersion } from "./prompt";
 import { GeminiHttpError, type ProviderResult } from "./gemini";
+import { analysisAccessAllowed } from "./analysis-access";
 import { resolveGeminiOutput } from "./gemini-citations";
 
 export async function analyzeSource(
@@ -34,6 +35,11 @@ export async function analyzeSource(
       >`SELECT id FROM change_sets WHERE workspace_id = ${workspaceId} AND source_version_id = ${input.sourceVersionId}`;
       if (existing) return { existing };
       const config = env();
+      requireCondition(
+        analysisAccessAllowed(actor, config),
+        "FORBIDDEN",
+        "Live analysis is restricted to approved accounts. Your source is saved.",
+      );
       const request = prepareAnalysis(context);
       // Global provider budget reservation and per-account frequency checks are serialized.
       await tx`SELECT pg_advisory_xact_lock(682051007)`;
@@ -75,6 +81,33 @@ export async function analyzeSource(
           usage.calls < config.GEMINI_VALIDATION_CALL_LIMIT,
           "QUOTA_EXHAUSTED",
           "The shared Gemini validation request cap has been reached. No generation request was sent.",
+        );
+      }
+      if (request.provider === "gemini") {
+        const hosted = process.env.VERCEL_ENV === "production";
+        const [releaseUsage] = await tx<
+          { total: number; account: number; running: number }[]
+        >`
+          SELECT count(*)::int AS total,
+            count(*) FILTER (WHERE actor_id = ${actor.userId})::int AS account,
+            count(*) FILTER (WHERE status = 'running')::int AS running
+          FROM analysis_runs WHERE provider = 'gemini'`;
+        if (hosted)
+          requireCondition(
+            releaseUsage.total < config.GEMINI_HOSTED_ATTEMPT_LIMIT,
+            "QUOTA_EXHAUSTED",
+            "The approved hosted attempt allowance is exhausted. No generation was sent.",
+          );
+        if (hosted || config.AI_ALLOWED_ACCOUNT_IDS.length)
+          requireCondition(
+            releaseUsage.account < config.AI_ACCOUNT_TOTAL_CALL_LIMIT,
+            "QUOTA_EXHAUSTED",
+            "This account's total analysis allowance is exhausted. No generation was sent.",
+          );
+        requireCondition(
+          releaseUsage.running === 0,
+          "CONFLICT",
+          "Another analysis is running. No generation was sent; try later.",
         );
       }
       const runId = randomUUID();
