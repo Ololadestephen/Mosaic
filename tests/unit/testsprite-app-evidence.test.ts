@@ -9,8 +9,10 @@ import { describe, expect, it, vi } from "vitest";
 import {
   verifyNativeRun,
   verifyPlanReceipt,
+  verifyNativeMetadata,
   APP_TEST_IDS,
 } from "../../scripts/testsprite/testsprite-app-evidence";
+import { nativePassCriteria } from "../../scripts/testsprite/testsprite-app-contract";
 import { nativeAppStatus } from "../../scripts/testsprite/wait-testsprite-app";
 const sha = "a".repeat(40);
 const prepared = "2026-10-21T15:00:00Z";
@@ -40,6 +42,81 @@ const status = {
 };
 
 describe("native App evidence identity", () => {
+  it("rejects missing or stale saved pass criteria even when the test ID matches", () => {
+    const name = "Native contract";
+    const description = "Every required assertion";
+    const steps = [{ type: "assertion" as const, description }];
+    const saved = {
+      id: run.testId,
+      name,
+      description,
+      planStepCount: 1,
+      planSteps: steps,
+    };
+    expect(
+      verifyNativeMetadata(saved, run.testId, name, description, steps).testId,
+    ).toBe(run.testId);
+    expect(() =>
+      verifyNativeMetadata(
+        { ...saved, description: "Old smoke goal" },
+        run.testId,
+        name,
+        description,
+        steps,
+      ),
+    ).toThrow();
+    expect(() =>
+      verifyNativeMetadata(
+        { ...saved, id: APP_TEST_IDS.review },
+        run.testId,
+        name,
+        description,
+        steps,
+      ),
+    ).toThrow();
+    expect(() =>
+      verifyNativeMetadata(
+        { id: run.testId, name },
+        run.testId,
+        name,
+        description,
+        steps,
+      ),
+    ).toThrow();
+    expect(() =>
+      verifyNativeMetadata(
+        { ...saved, planSteps: [], planStepCount: 0 },
+        run.testId,
+        name,
+        description,
+        steps,
+      ),
+    ).toThrow();
+  });
+  it("keeps intermediate assertions and actual refreshes in the pass criteria without truncation", () => {
+    const steps = [
+      {
+        type: "assertion" as const,
+        description: "Verify exact quote before apply.",
+      },
+      { type: "action" as const, description: "Refresh the page." },
+      {
+        type: "assertion" as const,
+        description: "Verify durable receipt after refresh.",
+      },
+    ];
+    const description = nativePassCriteria(steps);
+    for (const step of steps) expect(description).toContain(step.description);
+    expect(description).toContain("Do not skip intermediate checks");
+    expect(() =>
+      nativePassCriteria([{ type: "action", description: "Sign in" }]),
+    ).toThrow();
+    expect(() =>
+      nativePassCriteria([
+        { type: "assertion", description: "x".repeat(2000) },
+      ]),
+    ).toThrow(/limit/);
+  });
   it("rejects plan updates that do not acknowledge the exact step array", () => {
     const steps = [
       { type: "assertion", description: "Explicit refresh assertion" },
@@ -91,10 +168,27 @@ describe("native App evidence identity", () => {
       expect(expected.sha).toBe(sha);
       expect(expected.workspaceId).toMatch(/^[a-f0-9-]{36}$/);
       expect(expected.manualV2).toContain("SYNTHETIC TEST ONLY");
+      const manifest = JSON.parse(
+        readFileSync(join(out, "manifest.json"), "utf8"),
+      );
+      for (const [kind, file] of Object.entries({
+        session: "plan-session.json",
+        taskSource: "plan-task-source.json",
+        review: "plan-review-put.json",
+      })) {
+        const { planSteps } = JSON.parse(readFileSync(join(out, file), "utf8"));
+        expect(manifest.descriptions[kind].length).toBeLessThanOrEqual(2000);
+        expect(planSteps[1].type).toBe("assertion");
+        expect(planSteps[1].description).toContain(sha);
+        for (const step of planSteps) {
+          if (step.type === "assertion" || /refresh/i.test(step.description))
+            expect(manifest.descriptions[kind]).toContain(step.description);
+        }
+      }
       expect(
         JSON.parse(readFileSync(join(out, "plan-review-put.json"), "utf8"))
           .planSteps,
-      ).toHaveLength(29);
+      ).toHaveLength(31);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -215,7 +309,7 @@ describe("actual workflow trust guard", () => {
       "FIXTURE_OWNER_EMAIL: ${{ vars.MOSAIC_NATIVE_APP_OWNER_EMAIL }}",
     );
     expect(workflow).not.toContain("secrets.TESTSPRITE_FIXTURE_OWNER_EMAIL");
-    expect(workflow).toContain('if [ "$PREPARATION_RESULT" != success ]');
+    expect(workflow).toContain('[ "$PREPARATION_RESULT" != success ]');
   });
   it("rejects forks, arbitrary dispatch refs/numbers and stale events", async () => {
     await expect(
@@ -425,7 +519,9 @@ describe("actual success-only fixture readiness signal", () => {
     expect(workflow).toContain("if: needs.prepare.result == 'success'");
     expect(workflow).toContain("statuses: write");
     expect(workflow.split("  readiness:")[0]).not.toContain("statuses: write");
-    expect(workflow).toContain("vars.MOSAIC_NATIVE_APP_EVENT_ARMED == 'true'");
+    expect(workflow).toContain(
+      "NATIVE_EVENT_ARMED: ${{ vars.MOSAIC_NATIVE_APP_EVENT_ARMED }}",
+    );
   });
   it("rejects stale preparations, fork heads, closed PRs and unrelated events before writing", async () => {
     await expect(publishReadiness(trusted, "b".repeat(40))).rejects.toThrow();
@@ -465,4 +561,39 @@ describe("actual success-only fixture readiness signal", () => {
       await publishReadiness(trusted, sha, "workflow_dispatch"),
     ).toHaveBeenCalledTimes(1);
   });
+});
+
+describe("required native check fails closed without paid execution", () => {
+  const verifyJob = workflow.split("  verify:\n")[1];
+  const authorizationShell = verifyJob
+    .split("        run: |\n")[1]
+    .split("      - uses:")[0];
+  it.each([
+    ["true", "success", "success", 0],
+    ["false", "success", "success", 1],
+    ["", "success", "success", 1],
+    ["true", "failure", "skipped", 1],
+    ["true", "skipped", "skipped", 1],
+    ["true", "success", "failure", 1],
+  ])(
+    "armed=%s, preparation=%s, readiness=%s gives exit %s",
+    (armed, preparation, readiness, status) => {
+      expect(verifyJob).toContain("if: always()");
+      expect(verifyJob.split("    runs-on:")[0]).not.toContain("vars.");
+      const result = spawnSync(
+        "bash",
+        ["-euo", "pipefail", "-c", authorizationShell],
+        {
+          encoding: "utf8",
+          env: {
+            NODE_ENV: "test",
+            PREPARATION_RESULT: preparation as string,
+            READINESS_RESULT: readiness as string,
+            NATIVE_EVENT_ARMED: armed as string,
+          },
+        },
+      );
+      expect(result.status).toBe(status);
+    },
+  );
 });

@@ -111,14 +111,19 @@ jobs:
           export PLAN_DIR="$plans"
           node --import tsx --input-type=module <<'JS'
           import { readFileSync } from 'node:fs';
-          import { APP_TEST_IDS, verifyPlanReceipt } from './scripts/testsprite/testsprite-app-evidence.ts';
+          import { execFileSync } from 'node:child_process';
+          import { APP_TEST_IDS, verifyPlanReceipt, verifyNativeMetadata } from './scripts/testsprite/testsprite-app-evidence.ts';
           const files = { session: 'plan-session.json', taskSource: 'plan-task-source.json', review: 'plan-review-put.json' };
+          const manifest = JSON.parse(readFileSync(`${process.env.PLAN_DIR}/manifest.json`, 'utf8'));
+          const cli = args => JSON.parse(execFileSync('npx', ['-y', '@testsprite/testsprite-cli@0.2.0', '--output', 'json', ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
           for (const [kind, id] of Object.entries(APP_TEST_IDS)) {
             const steps = JSON.parse(readFileSync(`${process.env.PLAN_DIR}/${files[kind]}`, 'utf8')).planSteps;
             const receipt = JSON.parse(readFileSync(`${process.env.RUNNER_TEMP}/plan-${kind}-receipt.json`, 'utf8'));
             verifyPlanReceipt(receipt, steps, id);
+            cli(['test', 'update', id, '--name', manifest.names[kind], '--description', manifest.descriptions[kind], '--idempotency-key', `mosaic-native-goal-${process.env.SHA}-${process.env.FIXTURE_RUN}-${kind}`]);
+            verifyNativeMetadata(cli(['test', 'get', id]), id, manifest.names[kind], manifest.descriptions[kind], steps);
           }
-          console.log('Exact saved plan hashes and counts verified; no tests executed.');
+          console.log('Exact saved plans and complete pass criteria verified; no tests executed.');
           JS
           echo "prepared_at=$prepared_at" >> "$GITHUB_OUTPUT"
 
@@ -152,7 +157,7 @@ jobs:
   verify:
     name: Verify native App evidence
     needs: [prepare, readiness]
-    if: always() && vars.MOSAIC_NATIVE_APP_EVENT_ARMED == 'true'
+    if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
@@ -167,8 +172,9 @@ jobs:
         env:
           PREPARATION_RESULT: ${{ needs.prepare.result }}
           READINESS_RESULT: ${{ needs.readiness.result }}
+          NATIVE_EVENT_ARMED: ${{ vars.MOSAIC_NATIVE_APP_EVENT_ARMED }}
         run: |
-          if [ "$PREPARATION_RESULT" != success ] || [ "$READINESS_RESULT" != success ]; then
+          if [ "$NATIVE_EVENT_ARMED" != true ] || [ "$PREPARATION_RESULT" != success ] || [ "$READINESS_RESULT" != success ]; then
             echo "Native verification was not authorized/prepared. No passing result is claimed." >&2
             exit 1
           fi

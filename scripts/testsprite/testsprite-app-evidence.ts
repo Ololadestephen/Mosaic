@@ -3,12 +3,49 @@ import { readFile, writeFile } from "node:fs/promises";
 import { execFileSync, spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import { z } from "zod";
+import type { PlanStep } from "./testsprite-app-contract";
 
 export const APP_TEST_IDS = {
   session: "e6bb3299-471c-4afe-b939-6138b393cc59",
   taskSource: "bb8729d9-edcb-4705-afaa-b34e506b686f",
   review: "4faaa0ab-6d97-443a-bb71-9df7ba857577",
 } as const;
+export function verifyNativeMetadata(
+  raw: unknown,
+  testId: string,
+  name: string,
+  description: string,
+  steps: PlanStep[],
+) {
+  const saved = z
+    .object({
+      id: z.uuid(),
+      name: z.string(),
+      description: z.string(),
+      planStepCount: z.number().int(),
+      planSteps: z.array(
+        z.object({
+          type: z.enum(["action", "assertion"]),
+          description: z.string(),
+        }),
+      ),
+    })
+    .parse(raw);
+  if (
+    saved.id !== testId ||
+    saved.name !== name ||
+    saved.description !== description ||
+    saved.planStepCount !== steps.length ||
+    JSON.stringify(saved.planSteps) !== JSON.stringify(steps)
+  )
+    throw new Error(
+      "Saved native pass criteria do not match the authored contract.",
+    );
+  return {
+    testId,
+    descriptionHash: createHash("sha256").update(description).digest("hex"),
+  };
+}
 const runSchema = z.object({
   runId: z.uuid(),
   testId: z.uuid(),

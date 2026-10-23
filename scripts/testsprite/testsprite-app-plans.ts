@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { fixtureIds } from "./seed-preview";
 import { parseArgs } from "node:util";
+import { nativePassCriteria, type PlanStep } from "./testsprite-app-contract";
 import {
   APP_FIXTURE_CREATED_TASK_TITLE,
   APP_FIXTURE_DEADLINE_QUOTE,
@@ -10,8 +11,6 @@ import {
   APP_FIXTURE_TASK_TITLE,
   appFixtureWorkspaceName,
 } from "../../tests/fixtures/app-verification";
-
-type PlanStep = { type: "action" | "assertion"; description: string };
 
 const PROJECT_ID = "d9585a5d-bab0-438b-bda7-b6a9353aec2c";
 import {
@@ -26,7 +25,7 @@ function sessionPlan(workspace: string, sha: string): PlanStep[] {
     {
       type: "action",
       description:
-        "Navigate to `/api/health` on the deployed preview origin and read the JSON response.",
+        "Navigate to `/api/health` on the deployed preview origin, with no query string, and read the JSON response before entering credentials.",
     },
     {
       type: "assertion",
@@ -130,9 +129,9 @@ function taskSourcePlan(workspace: string): PlanStep[] {
     },
     {
       type: "action",
-      description:
-        "Select `Version 2 · explicit revision` and refresh the page.",
+      description: "Select `Version 2 · explicit revision`.",
     },
+    { type: "action", description: "Refresh the page." },
     {
       type: "assertion",
       description:
@@ -299,8 +298,9 @@ const out = values.out;
 if (!out) throw new Error("Output directory is required.");
 const workspace = appFixtureWorkspaceName(sha, run);
 const session = sessionPlan(workspace, sha);
-const taskSource = taskSourcePlan(workspace);
-const review = reviewPlan(workspace, changeSetId);
+const beforeCredentials = session.slice(0, 2);
+const taskSource = [...beforeCredentials, ...taskSourcePlan(workspace)];
+const review = [...beforeCredentials, ...reviewPlan(workspace, changeSetId)];
 await mkdir(out, { recursive: true });
 await writeFile(
   `${out}/expectations.json`,
@@ -325,12 +325,9 @@ const names = {
   review: "UI: review, selected apply, receipt, conflict-aware undo",
 };
 const descriptions = {
-  session:
-    "Portal-native browser check at the deployed commit: verify /api/health reports the exact injected SHA and ready status, sign in to the fresh App verification workspace, refresh, and confirm session persistence and protected-route denial after sign-out. No live AI.",
-  taskSource:
-    "Portal-native browser check: create a manual task and a two-version source in the fresh App verification workspace, verify exact contents and that version 1 remains immutable after version 2, and confirm persistence after refresh. No live AI.",
-  review:
-    "Portal-native browser check on the labelled deterministic fixture: review the attributed public-event proposal, select only due date and created task, apply, verify the receipt and untouched status, make a later due-date edit, then undo and confirm the later edit is preserved while eligible work is restored and the new task archived. No live AI.",
+  session: nativePassCriteria(session),
+  taskSource: nativePassCriteria(taskSource),
+  review: nativePassCriteria(review),
 };
 await writeFile(
   `${out}/plan-session.json`,
