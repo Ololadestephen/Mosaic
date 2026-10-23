@@ -113,18 +113,19 @@ export const analysisOutput = z
     preserved: z.array(z.string().min(1).max(1000)).max(30),
   })
   .strict();
-export const applyInput = z
+export const applyCommand = z
   .object({
     changeSetId: id,
     expectedRevision: z.number().int().positive(),
     selectedKeys: z.array(z.string().max(80)).min(1).max(40),
-    operationKey: id,
   })
   .strict()
   .refine(
     (v) => new Set(v.selectedKeys).size === v.selectedKeys.length,
     "Duplicate selection.",
   );
+// Full persisted recovery intent retains operation identity across browser refresh.
+export const applyInput = applyCommand.safeExtend({ operationKey: id });
 export const editDraftInput = z
   .object({
     expectedRevision: z.number().int().positive(),
@@ -132,7 +133,8 @@ export const editDraftInput = z
     value: z.string().max(100).nullable(),
   })
   .strict();
-export const undoInput = z.object({ batchId: id, operationKey: id }).strict();
+export const undoCommand = z.object({ batchId: id }).strict();
+export const undoInput = undoCommand.extend({ operationKey: id });
 export type Role = z.infer<typeof role>;
 export type TaskFields = z.infer<typeof taskFields>;
 export type Field = z.infer<typeof field>;

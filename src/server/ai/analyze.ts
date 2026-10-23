@@ -6,11 +6,15 @@ import { DomainError, requireCondition } from "@/domain/errors";
 import { inWorkspace } from "../auth/authorization";
 import { analysisContext, saveProposal } from "../reconciliation";
 import { env } from "../env";
-import { callProvider, prepareAnalysis } from "./provider";
+import {
+  callProvider,
+  prepareAnalysis,
+  providerFailureDetails,
+  type ProviderResult,
+} from "./provider";
+import { reportError } from "../diagnostics";
 import { promptVersion } from "./prompt";
-import { GeminiHttpError, type ProviderResult } from "./gemini";
 import { analysisAccessAllowed } from "./analysis-access";
-import { resolveGeminiOutput } from "./gemini-citations";
 
 export async function analyzeSource(
   actor: Actor,
@@ -125,12 +129,13 @@ export async function analyzeSource(
   );
   if (prepared.existing) return prepared.existing;
   const { context, request, runId } = prepared;
-  let response: ProviderResult | undefined;
+  let response: Pick<ProviderResult, "usage" | "durationMs"> | undefined;
   const started = Date.now();
   try {
     // Network calls happen outside every database write transaction.
     const generation = await callProvider(
       request,
+      context.source,
       signal,
       async (rawResponse) => {
         // Keep exact raw HTTP body separate from the resolved proposal, including invalid output.
@@ -144,6 +149,9 @@ export async function analyzeSource(
             "The analysis run was interrupted. No proposal was saved.",
           );
         });
+      },
+      (metadata) => {
+        response = metadata;
       },
     );
     response = generation;
@@ -166,9 +174,7 @@ export async function analyzeSource(
         actor,
         workspaceId,
         context,
-        request.provider === "gemini"
-          ? resolveGeminiOutput(generation.output, context.source)
-          : generation.output,
+        generation.output,
       );
       await tx`UPDATE analysis_runs SET status = 'completed', token_usage = ${generation.usage ? tx.json(generation.usage) : null}, duration_ms = ${generation.durationMs}, completed_at = now() WHERE workspace_id = ${workspaceId} AND id = ${runId}`;
       return result;
@@ -176,15 +182,43 @@ export async function analyzeSource(
   } catch (error) {
     // A permission change may block draft creation, but must not strand the run state.
     const { db } = await import("../db/client");
-    const failure =
-      error instanceof DomainError && error.code !== "INVALID_INPUT"
-        ? error
-        : new DomainError(
-            "INVALID_OUTPUT",
-            "The model returned unsupported proposals or invalid citations. No work was changed.",
-          );
-    const sql = db();
-    await sql`UPDATE analysis_runs SET status = 'failed', error_code = ${failure.code}, provider_http_status = ${failure instanceof GeminiHttpError ? failure.httpStatus : null}, provider_error_code = ${failure instanceof GeminiHttpError ? failure.category : null}, provider_error_details = ${failure instanceof GeminiHttpError ? sql.json(failure.diagnostic) : null}, token_usage = ${response?.usage ? sql.json(response.usage) : null}, duration_ms = ${Date.now() - started}, completed_at = now() WHERE id = ${runId} AND workspace_id = ${workspaceId} AND status = 'running'`;
+    const failure = analysisFailure(error);
+    const diagnostic = providerFailureDetails(failure);
+    await recordAnalysisFailure(failure, async () => {
+      const sql = db();
+      await sql`UPDATE analysis_runs SET status = 'failed', error_code = ${failure.code}, provider_http_status = ${diagnostic?.httpStatus ?? null}, provider_error_code = ${diagnostic?.code ?? null}, provider_error_details = ${diagnostic ? sql.json(diagnostic.details) : null}, token_usage = ${response?.usage ? sql.json(response.usage) : null}, duration_ms = ${Date.now() - started}, completed_at = now() WHERE id = ${runId} AND workspace_id = ${workspaceId} AND status = 'running'`;
+    });
     throw failure;
+  }
+}
+
+export function analysisFailure(error: unknown): DomainError {
+  if (error instanceof DomainError && error.code !== "INVALID_INPUT")
+    return error;
+  if (
+    error instanceof z.ZodError ||
+    (error instanceof DomainError && error.code === "INVALID_INPUT")
+  )
+    return new DomainError(
+      "INVALID_OUTPUT",
+      "The model returned unsupported proposals or invalid citations. No work was changed.",
+      { cause: error },
+    );
+  return new DomainError(
+    "UNAVAILABLE",
+    "Analysis could not be saved. Check this run before trying again.",
+    { cause: error },
+  );
+}
+
+export async function recordAnalysisFailure(
+  primary: DomainError,
+  record: () => Promise<void>,
+) {
+  try {
+    await record();
+  } catch (secondary) {
+    reportError("analysis-failure-record", secondary);
+    reportError("analysis-primary-failure", primary);
   }
 }

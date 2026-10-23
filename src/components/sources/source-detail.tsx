@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PASSAGE_REVIEW_LABEL } from "@/domain/sources/passage-change";
 import type { SourceDetail } from "@/client/types";
-import { addRevision, analyzeSource, loadSource } from "../commands";
+import { addRevision, analyzeSource, loadSource } from "@/client/commands";
 import { Dialog } from "../dialog";
 import { SourcePassage } from "./source-passage";
 import { RevisionComparison } from "./revision-comparison";
@@ -120,6 +120,9 @@ export function SourceDetailView({
     source.versions.find((version) => version.id === selected) ??
     source.versions[0];
   const isLatest = version.id === source.latestVersionId;
+  const passageReviews = source.passageReviews.filter(
+    (review) => review.laterVersionId === version.id,
+  );
   const predecessor = source.versions.find(
     (entry) => entry.id === version.predecessorId,
   );
@@ -214,15 +217,7 @@ export function SourceDetailView({
       )}
       {run && !draft && (
         <p className="notice" role="status">
-          {run.status === "running"
-            ? "An analysis was started. Refresh to check for its completed proposal before retrying."
-            : run.status === "failed"
-              ? run.errorCode === "QUOTA_EXHAUSTED"
-                ? "Provider quota is exhausted or rate-limited. Your source is saved; no work was changed and no automatic retry was made."
-                : run.errorCode === "INVALID_OUTPUT"
-                  ? "The provider returned invalid or incomplete proposals. Nothing was saved or applied."
-                  : "The provider was unavailable or analysis did not complete. Your source is saved and no work was changed."
-              : "Analysis completed. Open its proposal from Changes."}
+          {analysisRunMessage(run)}
           {run.providerHttpStatus &&
             ` HTTP ${run.providerHttpStatus} · ${run.providerErrorCode ?? "PROVIDER_ERROR"}.`}
         </p>
@@ -273,41 +268,35 @@ export function SourceDetailView({
         <RevisionComparison
           current={version}
           predecessor={predecessor}
-          references={source.passageReviews
-            .filter((review) => review.laterVersionId === version.id)
-            .map((review) => ({
-              versionId: review.citedVersionId,
-              start: review.start,
-              end: review.end,
-              href: `/app/tasks/${review.taskId}`,
-              label: `Review flag: ${review.taskTitle}`,
-            }))}
+          references={passageReviews.map((review) => ({
+            versionId: review.citedVersionId,
+            start: review.start,
+            end: review.end,
+            href: `/app/tasks/${review.taskId}`,
+            label: `Review flag: ${review.taskTitle}`,
+          }))}
         />
       )}
-      {source.passageReviews.some(
-        (review) => review.laterVersionId === version.id,
-      ) && (
+      {passageReviews.length > 0 && (
         <section className="passage-reviews" aria-label={PASSAGE_REVIEW_LABEL}>
           <h3>{PASSAGE_REVIEW_LABEL}</h3>
           <ul>
-            {source.passageReviews
-              .filter((review) => review.laterVersionId === version.id)
-              .map((review) => (
-                <li key={`${review.taskId}:${review.start}:${review.end}`}>
-                  <Link href={`/app/tasks/${review.taskId}`}>
-                    {review.taskTitle}
-                  </Link>
-                  <p>
-                    {review.change === "removed"
-                      ? "The cited passage was removed."
-                      : "The cited passage was edited."}{" "}
-                    No task field was changed.
-                  </p>
-                  <blockquote>
-                    <p>{review.quote}</p>
-                  </blockquote>
-                </li>
-              ))}
+            {passageReviews.map((review) => (
+              <li key={`${review.taskId}:${review.start}:${review.end}`}>
+                <Link href={`/app/tasks/${review.taskId}`}>
+                  {review.taskTitle}
+                </Link>
+                <p>
+                  {review.change === "removed"
+                    ? "The cited passage was removed."
+                    : "The cited passage was edited."}{" "}
+                  No task field was changed.
+                </p>
+                <blockquote>
+                  <p>{review.quote}</p>
+                </blockquote>
+              </li>
+            ))}
           </ul>
         </section>
       )}
@@ -346,4 +335,16 @@ export function SourceDetailView({
       )}
     </>
   );
+}
+
+function analysisRunMessage(run: { status: string; errorCode: string | null }) {
+  if (run.status === "running")
+    return "An analysis was started. Refresh to check for its completed proposal before retrying.";
+  if (run.status !== "failed")
+    return "Analysis completed. Open its proposal from Changes.";
+  if (run.errorCode === "QUOTA_EXHAUSTED")
+    return "Provider quota is exhausted or rate-limited. Your source is saved; no work was changed and no automatic retry was made.";
+  if (run.errorCode === "INVALID_OUTPUT")
+    return "The provider returned invalid or incomplete proposals. Nothing was saved or applied.";
+  return "The provider was unavailable or analysis did not complete. Your source is saved and no work was changed.";
 }

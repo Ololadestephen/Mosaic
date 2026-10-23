@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import type { WorkspaceData } from "@/client/types";
 import { sampleBrief, sampleTitle } from "@/domain/sources/sample";
-import { createSource } from "../commands";
+import { sourceInput } from "@/domain/contracts";
+import { createSource } from "@/client/commands";
 import { Dialog } from "../dialog";
 
 export function SourceLibrary({
@@ -79,11 +80,11 @@ export function NewSource({
     try {
       const result = await createSource(
         workspaceId,
-        {
+        sourceInput.parse({
           title,
           text,
           visibility: data.get("visibility"),
-        },
+        }),
         key,
       );
       await onSaved(result.sourceId);

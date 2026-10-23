@@ -47,3 +47,12 @@ describe("browser apply recovery intent", () => {
     ).toThrow("No apply request was sent");
   });
 });
+
+it("optional cleanup failure does not hide a confirmed server receipt", () => {
+  vi.stubGlobal("sessionStorage", {
+    removeItem: () => {
+      throw Error("storage denied");
+    },
+  });
+  expect(clearApplyAttempt(randomUUID(), randomUUID())).toBe(false);
+});

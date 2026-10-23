@@ -119,3 +119,41 @@ describe("provider boundary with mocked HTTP, never live AI", () => {
     expect(request.reservedUsd).toBeGreaterThan(0.01);
   });
 });
+
+describe("OpenRouter raw capture and validated diagnostics (mocked only)", () => {
+  it("captures the exact body before parsing malformed output", async () => {
+    const raw = '{"choices":';
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(raw)));
+    const capture = vi.fn().mockResolvedValue(undefined);
+    await expect(callProvider("{}", undefined, capture)).rejects.toMatchObject({
+      code: "PROVIDER_FAILED",
+    });
+    expect(capture).toHaveBeenCalledExactlyOnceWith(raw);
+  });
+  it.each([
+    { error: { message: 123 } },
+    { error: null },
+    { error: { message: "sk-synthetic-placeholder" } },
+  ])("safely handles untrusted provider errors %j", async (body) => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(Response.json(body, { status: 400 }));
+    vi.stubGlobal("fetch", fetch);
+    const error = await callProvider("{}").catch((error: unknown) => error);
+    expect(error).toMatchObject({ code: "PROVIDER_FAILED" });
+    expect(String(error)).not.toContain("sk-synthetic-placeholder");
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+  it("does not lose a capture persistence failure", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}")));
+    const primary = new (await import("@/domain/errors")).DomainError(
+      "FORBIDDEN",
+      "Access revoked.",
+    );
+    await expect(
+      callProvider("{}", undefined, async () => {
+        throw primary;
+      }),
+    ).rejects.toBe(primary);
+  });
+});

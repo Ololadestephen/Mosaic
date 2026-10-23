@@ -10,6 +10,18 @@ import {
   workspacePayload,
 } from "@/domain/api";
 import { api } from "./api";
+import type {
+  credentials,
+  workspaceInput,
+  memberInput,
+  createTaskInput,
+  editTaskInput,
+  sourceInput,
+  revisionInput,
+  editDraftInput,
+  applyCommand,
+  undoCommand,
+} from "@/domain/contracts";
 
 const idRecord = z.object({ id: z.string() }).catchall(z.unknown());
 
@@ -17,7 +29,7 @@ export function listWorkspaces() {
   return api("workspaces", workspaceList);
 }
 
-export function createWorkspace(body: unknown) {
+export function createWorkspace(body: z.input<typeof workspaceInput>) {
   return api("workspaces", idRecord, "POST", body);
 }
 
@@ -25,7 +37,10 @@ export function loadWorkspace(workspaceId: string) {
   return api(`workspaces/${workspaceId}`, workspacePayload);
 }
 
-export function saveMember(workspaceId: string, body: unknown) {
+export function saveMember(
+  workspaceId: string,
+  body: z.input<typeof memberInput>,
+) {
   return api(
     `workspaces/${workspaceId}/members`,
     z.object({ id: z.string(), role: z.string() }),
@@ -40,7 +55,7 @@ export function loadSource(workspaceId: string, sourceId: string) {
 
 export function createSource(
   workspaceId: string,
-  body: unknown,
+  body: z.input<typeof sourceInput>,
   operationKey: string,
 ) {
   return api(
@@ -55,7 +70,7 @@ export function createSource(
 export function addRevision(
   workspaceId: string,
   sourceId: string,
-  body: unknown,
+  body: z.input<typeof revisionInput>,
 ) {
   return api(
     `workspaces/${workspaceId}/sources/${sourceId}/revisions`,
@@ -65,7 +80,10 @@ export function addRevision(
   );
 }
 
-export function analyzeSource(workspaceId: string, body: unknown) {
+export function analyzeSource(
+  workspaceId: string,
+  body: { sourceVersionId: string },
+) {
   return api(`workspaces/${workspaceId}/analyze`, idRecord, "POST", body);
 }
 
@@ -75,7 +93,7 @@ export function loadTask(workspaceId: string, taskId: string) {
 
 export function createTask(
   workspaceId: string,
-  body: unknown,
+  body: z.input<typeof createTaskInput>,
   operationKey: string,
 ) {
   return api(
@@ -90,7 +108,7 @@ export function createTask(
 export function editTask(
   workspaceId: string,
   taskId: string,
-  body: unknown,
+  body: z.input<typeof editTaskInput>,
   operationKey: string,
 ) {
   return api(
@@ -112,7 +130,7 @@ export function loadProposal(workspaceId: string, changeSetId: string) {
 export function editProposal(
   workspaceId: string,
   changeSetId: string,
-  body: unknown,
+  body: z.input<typeof editDraftInput>,
 ) {
   return api(
     `workspaces/${workspaceId}/changes/${changeSetId}`,
@@ -124,7 +142,7 @@ export function editProposal(
 
 export function applyProposal(
   workspaceId: string,
-  body: unknown,
+  body: z.input<typeof applyCommand>,
   operationKey: string,
 ): Promise<BatchResult> {
   return api(
@@ -156,7 +174,7 @@ export function previewUndo(workspaceId: string, batchId: string) {
 
 export function undoBatch(
   workspaceId: string,
-  body: unknown,
+  body: z.input<typeof undoCommand>,
   operationKey: string,
 ) {
   return api(
@@ -168,7 +186,7 @@ export function undoBatch(
   );
 }
 
-export function signIn(register: boolean, body: unknown) {
+export function signIn(register: boolean, body: z.input<typeof credentials>) {
   return api(
     `auth/${register ? "register" : "login"}`,
     z.object({ id: z.string() }).catchall(z.unknown()),

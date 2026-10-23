@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { Task } from "@/domain/contracts";
+import { editTaskInput, type Task } from "@/domain/contracts";
 import { PASSAGE_REVIEW_LABEL } from "@/domain/sources/passage-change";
 import type { TaskDetail } from "@/client/types";
-import { editTask, loadTask } from "../commands";
+import { editTask, loadTask } from "@/client/commands";
 import { Dialog } from "../dialog";
 import { TaskFields, type Members } from "./task-board";
 
@@ -57,7 +57,7 @@ export function TaskDetailPanel({
       await editTask(
         workspaceId,
         taskId,
-        { ...changes, expectedRevision: task.revision },
+        editTaskInput.parse({ ...changes, expectedRevision: task.revision }),
         crypto.randomUUID(),
       );
       setTask(await loadTask(workspaceId, taskId));

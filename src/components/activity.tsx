@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import type { BatchResult, UndoPreview, WorkspaceData } from "@/client/types";
 import { Dialog } from "./dialog";
-import { previewUndo, undoBatch } from "./commands";
+import { previewUndo, undoBatch } from "@/client/commands";
 
 export function Activity({
   workspaceId,
@@ -44,6 +44,7 @@ export function Activity({
     }
   }
   async function undo() {
+    if (!target) return;
     setBusy(true);
     setError("");
     try {

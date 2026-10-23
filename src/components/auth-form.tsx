@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { signIn } from "./commands";
+import { credentials } from "@/domain/contracts";
+import { signIn } from "@/client/commands";
 
 export function AuthForm({
   initialRegister,
@@ -22,11 +23,14 @@ export function AuthForm({
     setBusy(true);
     setError("");
     try {
-      await signIn(register, {
-        email: data.get("email"),
-        password: data.get("password"),
-        ...(register ? { name: data.get("name") } : {}),
-      });
+      await signIn(
+        register,
+        credentials.parse({
+          email: data.get("email"),
+          password: data.get("password"),
+          ...(register ? { name: data.get("name") } : {}),
+        }),
+      );
       router.replace("/app");
     } catch (error) {
       setError(error instanceof Error ? error.message : "Could not sign in.");

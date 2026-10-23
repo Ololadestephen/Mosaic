@@ -10,7 +10,7 @@ import { editProposal, getProposal } from "../reconciliation";
 import {
   applyProposal,
   lookupOperation,
-  verifiedWrite,
+  writeAndAttemptVerification,
   verifyBatch,
 } from "../execution";
 import { compensate, previewCompensation } from "../compensation";
@@ -35,12 +35,6 @@ function notFound(): never {
 
 function operationKey(request: Request) {
   return id.parse(request.headers.get("x-operation-key"));
-}
-
-function withOperationKey(body: unknown, key: string) {
-  return body && typeof body === "object" && !Array.isArray(body)
-    ? { ...body, operationKey: key }
-    : body;
 }
 
 const commands: Command[] = [
@@ -83,22 +77,18 @@ const commands: Command[] = [
   },
   async (request, path, actor, workspaceId) => {
     if (path[2] !== "apply" || request.method !== "POST") return unmatched();
-    const body = withOperationKey(
-      await readBody(request),
-      operationKey(request),
-    );
-    return verifiedWrite(actor, workspaceId, () =>
-      applyProposal(actor, workspaceId, body),
+    const key = operationKey(request);
+    const body = await readBody(request);
+    return writeAndAttemptVerification(actor, workspaceId, () =>
+      applyProposal(actor, workspaceId, body, key),
     );
   },
   async (request, path, actor, workspaceId) => {
     if (path[2] !== "undo" || request.method !== "POST") return unmatched();
-    const body = withOperationKey(
-      await readBody(request),
-      operationKey(request),
-    );
-    return verifiedWrite(actor, workspaceId, () =>
-      compensate(actor, workspaceId, body),
+    const key = operationKey(request);
+    const body = await readBody(request);
+    return writeAndAttemptVerification(actor, workspaceId, () =>
+      compensate(actor, workspaceId, body, key),
     );
   },
   async (request, path, actor, workspaceId) => {
@@ -141,11 +131,11 @@ const commands: Command[] = [
     const key = operationKey(request);
     const body = await readBody(request);
     if (path.length === 3 && request.method === "POST")
-      return verifiedWrite(actor, workspaceId, () =>
+      return writeAndAttemptVerification(actor, workspaceId, () =>
         createTask(actor, workspaceId, body, key),
       );
     if (request.method === "PATCH")
-      return verifiedWrite(actor, workspaceId, () =>
+      return writeAndAttemptVerification(actor, workspaceId, () =>
         editTask(actor, workspaceId, id.parse(path[3]), body, key),
       );
     notFound();

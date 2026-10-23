@@ -67,12 +67,12 @@ const proposal = await inWorkspace(actor, workspace.id, "write", async (tx) =>
     },
   ),
 );
-const applied = await applyProposal(actor, workspace.id, {
-  changeSetId: proposal.id,
-  expectedRevision: 1,
-  selectedKeys: ["supplier"],
-  operationKey: randomUUID(),
-});
+const applied = await applyProposal(
+  actor,
+  workspace.id,
+  { changeSetId: proposal.id, expectedRevision: 1, selectedKeys: ["supplier"] },
+  randomUUID(),
+);
 const revised = await addRevision(actor, workspace.id, source.sourceId, {
   text: text.replace("Friday", "Monday"),
   predecessorId: source.versionId,

@@ -1,6 +1,7 @@
-import { beforeAll, afterAll, describe, expect, it } from "vitest";
+import { beforeAll, afterAll, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
 import { prepareDatabase, workspace, account } from "./helpers";
+import * as databaseModule from "@/server/db/client";
 import { closeDatabase, db } from "@/server/db/client";
 import { inWorkspace } from "@/server/auth/authorization";
 import {
@@ -15,6 +16,7 @@ import {
   applyProposal,
   lookupOperation,
   verifyBatch,
+  writeAndAttemptVerification,
 } from "@/server/execution";
 import { compensate } from "@/server/compensation";
 import { analyzeSource } from "@/server/ai/analyze";
@@ -87,12 +89,16 @@ describe("review, apply, verify and compensation on PostgreSQL", () => {
     );
     try {
       await expect(
-        applyProposal(owner.actor, owner.workspaceId, {
-          changeSetId: draft.id,
-          expectedRevision: 1,
-          selectedKeys: ["item0", "item1"],
-          operationKey: randomUUID(),
-        }),
+        applyProposal(
+          owner.actor,
+          owner.workspaceId,
+          {
+            changeSetId: draft.id,
+            expectedRevision: 1,
+            selectedKeys: ["item0", "item1"],
+          },
+          randomUUID(),
+        ),
       ).rejects.toMatchObject({ code: "UNAVAILABLE" });
       expect(await listTasks(owner.actor, owner.workspaceId)).toHaveLength(0);
       expect(
@@ -133,8 +139,26 @@ describe("review, apply, verify and compensation on PostgreSQL", () => {
       operationKey: randomUUID(),
     };
     const [a, b] = await Promise.all([
-      applyProposal(owner.actor, owner.workspaceId, command),
-      applyProposal(owner.actor, owner.workspaceId, command),
+      applyProposal(
+        owner.actor,
+        owner.workspaceId,
+        {
+          changeSetId: command.changeSetId,
+          expectedRevision: command.expectedRevision,
+          selectedKeys: command.selectedKeys,
+        },
+        command.operationKey,
+      ),
+      applyProposal(
+        owner.actor,
+        owner.workspaceId,
+        {
+          changeSetId: command.changeSetId,
+          expectedRevision: command.expectedRevision,
+          selectedKeys: command.selectedKeys,
+        },
+        command.operationKey,
+      ),
     ]);
     expect(a.batchId).toBe(b.batchId);
     expect(await listTasks(owner.actor, owner.workspaceId)).toHaveLength(1);
@@ -155,10 +179,16 @@ describe("review, apply, verify and compensation on PostgreSQL", () => {
     const task = await getTask(owner.actor, owner.workspaceId, a.taskIds[0]);
     expect(task.evidence[0].quote).toBe(text);
     await expect(
-      applyProposal(owner.actor, owner.workspaceId, {
-        ...command,
-        selectedKeys: ["other"],
-      }),
+      applyProposal(
+        owner.actor,
+        owner.workspaceId,
+        {
+          changeSetId: command.changeSetId,
+          expectedRevision: command.expectedRevision,
+          selectedKeys: ["other"],
+        },
+        command.operationKey,
+      ),
     ).rejects.toMatchObject({ code: "CONFLICT" });
     expect(
       (
@@ -217,12 +247,16 @@ describe("review, apply, verify and compensation on PostgreSQL", () => {
       randomUUID(),
     );
     await expect(
-      applyProposal(owner.actor, owner.workspaceId, {
-        changeSetId: draft.id,
-        expectedRevision: 1,
-        selectedKeys: ["new", "update"],
-        operationKey: randomUUID(),
-      }),
+      applyProposal(
+        owner.actor,
+        owner.workspaceId,
+        {
+          changeSetId: draft.id,
+          expectedRevision: 1,
+          selectedKeys: ["new", "update"],
+        },
+        randomUUID(),
+      ),
     ).rejects.toMatchObject({ code: "CONFLICT" });
     expect(await listTasks(owner.actor, owner.workspaceId)).toHaveLength(1);
     expect(
@@ -273,12 +307,12 @@ describe("review, apply, verify and compensation on PostgreSQL", () => {
       (await listTasks(owner.actor, owner.workspaceId))[0].dueDate,
     ).toBeNull();
     await expect(
-      applyProposal(owner.actor, owner.workspaceId, {
-        changeSetId: draft.id,
-        expectedRevision: 1,
-        selectedKeys: ["date"],
-        operationKey: randomUUID(),
-      }),
+      applyProposal(
+        owner.actor,
+        owner.workspaceId,
+        { changeSetId: draft.id, expectedRevision: 1, selectedKeys: ["date"] },
+        randomUUID(),
+      ),
     ).rejects.toMatchObject({ code: "CONFLICT" });
   });
   it("restores eligible fields while protecting a later same-field away-and-back edit", async () => {
@@ -329,12 +363,16 @@ describe("review, apply, verify and compensation on PostgreSQL", () => {
         },
       ],
     );
-    const applied = await applyProposal(owner.actor, owner.workspaceId, {
-      changeSetId: draft.id,
-      expectedRevision: 1,
-      selectedKeys: ["date", "status"],
-      operationKey: randomUUID(),
-    });
+    const applied = await applyProposal(
+      owner.actor,
+      owner.workspaceId,
+      {
+        changeSetId: draft.id,
+        expectedRevision: 1,
+        selectedKeys: ["date", "status"],
+      },
+      randomUUID(),
+    );
     const recorded = await getProposal(
       owner.actor,
       owner.workspaceId,
@@ -374,7 +412,12 @@ describe("review, apply, verify and compensation on PostgreSQL", () => {
       randomUUID(),
     );
     const command = { batchId: applied.batchId, operationKey: randomUUID() };
-    const undone = await compensate(owner.actor, owner.workspaceId, command);
+    const undone = await compensate(
+      owner.actor,
+      owner.workspaceId,
+      { batchId: command.batchId },
+      command.operationKey,
+    );
     expect(
       undone.outcomes.find((outcome) => outcome.field === "dueDate")?.outcome,
     ).toBe("conflict");
@@ -385,14 +428,23 @@ describe("review, apply, verify and compensation on PostgreSQL", () => {
     expect(task.dueDate).toBe("2026-10-22");
     expect(task.status).toBe("todo");
     expect(
-      (await compensate(owner.actor, owner.workspaceId, command)).batchId,
+      (
+        await compensate(
+          owner.actor,
+          owner.workspaceId,
+          { batchId: command.batchId },
+          command.operationKey,
+        )
+      ).batchId,
     ).toBe(undone.batchId);
     expect(
       (
-        await compensate(teammate.actor, owner.workspaceId, {
-          batchId: applied.batchId,
-          operationKey: randomUUID(),
-        })
+        await compensate(
+          teammate.actor,
+          owner.workspaceId,
+          { batchId: applied.batchId },
+          randomUUID(),
+        )
       ).batchId,
     ).toBe(undone.batchId);
     expect(
@@ -422,10 +474,12 @@ describe("review, apply, verify and compensation on PostgreSQL", () => {
     );
     expect(
       (
-        await compensate(owner.actor, owner.workspaceId, {
-          batchId: a.batchId,
-          operationKey: randomUUID(),
-        })
+        await compensate(
+          owner.actor,
+          owner.workspaceId,
+          { batchId: a.batchId },
+          randomUUID(),
+        )
       ).outcomes[0].outcome,
     ).toBe("restored");
     expect(
@@ -433,10 +487,12 @@ describe("review, apply, verify and compensation on PostgreSQL", () => {
     ).toBe(true);
     expect(
       (
-        await compensate(owner.actor, owner.workspaceId, {
-          batchId: b.batchId,
-          operationKey: randomUUID(),
-        })
+        await compensate(
+          owner.actor,
+          owner.workspaceId,
+          { batchId: b.batchId },
+          randomUUID(),
+        )
       ).outcomes[0].outcome,
     ).toBe("conflict");
     expect((await listTasks(owner.actor, owner.workspaceId))[0].title).toBe(
@@ -466,12 +522,12 @@ describe("review, apply, verify and compensation on PostgreSQL", () => {
         },
       ],
     );
-    const applied = await applyProposal(owner.actor, owner.workspaceId, {
-      changeSetId: draft.id,
-      expectedRevision: 1,
-      selectedKeys: ["private"],
-      operationKey: randomUUID(),
-    });
+    const applied = await applyProposal(
+      owner.actor,
+      owner.workspaceId,
+      { changeSetId: draft.id, expectedRevision: 1, selectedKeys: ["private"] },
+      randomUUID(),
+    );
     await expect(
       getProposal(viewer.actor, owner.workspaceId, draft.id),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
@@ -516,14 +572,32 @@ describe("review, apply, verify and compensation on PostgreSQL", () => {
       operationKey: randomUUID(),
     };
     await expect(
-      applyProposal(editor.actor, owner.workspaceId, command),
+      applyProposal(
+        editor.actor,
+        owner.workspaceId,
+        {
+          changeSetId: command.changeSetId,
+          expectedRevision: command.expectedRevision,
+          selectedKeys: command.selectedKeys,
+        },
+        command.operationKey,
+      ),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
     await addRevision(owner.actor, owner.workspaceId, owner.source.sourceId, {
       predecessorId: owner.source.versionId,
       text: "Launch is paused.",
     });
     await expect(
-      applyProposal(owner.actor, owner.workspaceId, command),
+      applyProposal(
+        owner.actor,
+        owner.workspaceId,
+        {
+          changeSetId: command.changeSetId,
+          expectedRevision: command.expectedRevision,
+          selectedKeys: command.selectedKeys,
+        },
+        command.operationKey,
+      ),
     ).rejects.toMatchObject({ code: "CONFLICT" });
   });
   it("reports disabled live analysis honestly without a fixture or provider call", async () => {
@@ -539,5 +613,158 @@ describe("review, apply, verify and compensation on PostgreSQL", () => {
         await db()`SELECT id FROM analysis_runs WHERE workspace_id = ${owner.workspaceId}`
       ).length,
     ).toBe(0);
+  });
+});
+
+describe("proposal lifecycle remains available beyond generation context limits", () => {
+  it("reads and applies a valid proposal and receipt after unrelated tasks cross 150", async () => {
+    const owner = await scenario();
+    const task = await createTask(
+      owner.actor,
+      owner.workspaceId,
+      {
+        title: "Cited synthetic target",
+        status: "todo",
+        assigneeId: null,
+        dueDate: "2026-10-20",
+      },
+      randomUUID(),
+    );
+    const draft = await fixtureProposal(
+      owner.actor,
+      owner.workspaceId,
+      owner.source.versionId,
+      [
+        {
+          kind: "update",
+          key: "date",
+          taskId: task.taskIds[0],
+          expectedRevision: 1,
+          field: "dueDate",
+          value: "2026-10-22",
+          reason: "Synthetic",
+          impact: "Schedule",
+          citations: [owner.citation],
+        },
+      ],
+    );
+    await db()`INSERT INTO tasks (workspace_id,title,status) SELECT ${owner.workspaceId}, 'Unrelated synthetic ' || n::text, 'todo' FROM generate_series(1,150) AS n`;
+    await expect(
+      inWorkspace(owner.actor, owner.workspaceId, "read", (tx) =>
+        analysisContext(
+          tx,
+          owner.actor,
+          owner.workspaceId,
+          owner.source.versionId,
+        ),
+      ),
+    ).rejects.toMatchObject({
+      code: "INVALID_INPUT",
+      message: expect.stringContaining("150-task analysis limit"),
+    });
+    const readable = await getProposal(
+      owner.actor,
+      owner.workspaceId,
+      draft.id,
+    );
+    expect(readable.tasks.map((task) => task.id)).toEqual([task.taskIds[0]]);
+    const result = await applyProposal(
+      owner.actor,
+      owner.workspaceId,
+      { changeSetId: draft.id, expectedRevision: 1, selectedKeys: ["date"] },
+      randomUUID(),
+    );
+    expect(result.count).toBe(1);
+    const receipt = await getProposal(owner.actor, owner.workspaceId, draft.id);
+    expect(receipt.state).toBe("applied");
+    expect(receipt.receipt).toMatchObject([
+      {
+        taskId: task.taskIds[0],
+        field: "dueDate",
+        before: "2026-10-20",
+        after: "2026-10-22",
+      },
+    ]);
+    const [untouched] =
+      await db()`SELECT count(*)::int AS count FROM tasks WHERE workspace_id=${owner.workspaceId} AND id<>${task.taskIds[0]} AND revision=1 AND due_date IS NULL AND status='todo'`;
+    expect(untouched.count).toBe(150);
+    expect(
+      await db()`SELECT id FROM execution_batches WHERE workspace_id=${owner.workspaceId} AND operation='apply'`,
+    ).toHaveLength(1);
+  });
+});
+
+describe("committed write with failed server readback", () => {
+  it("returns pending, preserves one real mutation and recovers the same batch once read access returns", async () => {
+    const owner = await workspace();
+    const key = randomUUID();
+    let readFailure: ReturnType<typeof vi.spyOn> | undefined;
+    const result = await writeAndAttemptVerification(
+      owner.actor,
+      owner.workspaceId,
+      async () => {
+        const committed = await createTask(
+          owner.actor,
+          owner.workspaceId,
+          {
+            title: "Synthetic readback interruption",
+            status: "todo",
+            assigneeId: null,
+            dueDate: null,
+          },
+          key,
+        );
+        // The write is real PostgreSQL; interrupt only the subsequent read boundary.
+        readFailure = vi
+          .spyOn(databaseModule, "db")
+          .mockImplementationOnce(() => {
+            throw new Error("Synthetic verification read unavailable");
+          });
+        return committed;
+      },
+    ).finally(() => readFailure?.mockRestore());
+    expect(result).toMatchObject({ count: 1, verification: "pending" });
+    expect(
+      await db()`SELECT id FROM execution_batches WHERE workspace_id=${owner.workspaceId}`,
+    ).toHaveLength(1);
+    expect(
+      await db()`SELECT id FROM change_events WHERE workspace_id=${owner.workspaceId}`,
+    ).toHaveLength(1);
+    expect(
+      await db()`SELECT id FROM tasks WHERE workspace_id=${owner.workspaceId}`,
+    ).toHaveLength(1);
+    const recovered = await lookupOperation(
+      owner.actor,
+      owner.workspaceId,
+      "create",
+      key,
+    );
+    expect(recovered).toMatchObject({
+      batchId: result.batchId,
+      count: 1,
+      verification: "verified",
+    });
+    expect(
+      await db()`SELECT id FROM execution_batches WHERE workspace_id=${owner.workspaceId}`,
+    ).toHaveLength(1);
+  });
+  it("propagates a failed write without fabricating a pending receipt", async () => {
+    const owner = await workspace();
+    await expect(
+      writeAndAttemptVerification(owner.actor, owner.workspaceId, () =>
+        createTask(
+          owner.actor,
+          owner.workspaceId,
+          { title: "", status: "todo", assigneeId: null, dueDate: null },
+          randomUUID(),
+        ),
+      ),
+    ).rejects.toThrow();
+    expect(
+      await db()`SELECT id FROM execution_batches WHERE workspace_id=${owner.workspaceId}`,
+    ).toHaveLength(0);
+    expect(
+      await db()`SELECT id FROM tasks WHERE workspace_id=${owner.workspaceId}`,
+    ).toHaveLength(0);
   });
 });

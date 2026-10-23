@@ -2,7 +2,12 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { account, prepareDatabase, workspace } from "./helpers";
 import { closeDatabase, db } from "@/server/db/client";
-import { resolveSession, signOut } from "@/server/auth/accounts";
+import {
+  digest,
+  signIn,
+  resolveSession,
+  signOut,
+} from "@/server/auth/accounts";
 import { listWorkspaces, setMember } from "@/server/workspaces";
 import {
   addRevision,
@@ -216,5 +221,38 @@ describe("real PostgreSQL workspace", () => {
     await expect(
       db()`INSERT INTO tasks (workspace_id, title, assignee_id) VALUES (${owner.workspaceId}, 'Invalid', ${outsider.actor.userId})`,
     ).rejects.toMatchObject({ code: "23503" });
+  });
+});
+
+describe("real PostgreSQL authentication time boundaries", () => {
+  it("rejects an expired session without deleting unrelated sessions", async () => {
+    const owner = await account();
+    const other = await account();
+    await db()`UPDATE sessions SET expires_at = now() - interval '1 second' WHERE token_hash = ${digest(owner.token)}`;
+    expect(await resolveSession(owner.token)).toBeNull();
+    expect((await resolveSession(other.token))?.id).toBe(other.actor.userId);
+  });
+  it("permits attempt fifteen, rejects sixteen without a session and resets an elapsed window", async () => {
+    const owner = await account();
+    const key = digest(`signin:${owner.account.email}`);
+    await db()`UPDATE rate_limits SET attempts = 14 WHERE key = ${key}`;
+    const input = {
+      email: owner.account.email,
+      password: "local-test-password-only",
+    };
+    await expect(signIn(input, false)).resolves.toHaveProperty("token");
+    const [before] =
+      await db()`SELECT count(*)::int AS count FROM sessions WHERE user_id = ${owner.actor.userId}`;
+    await expect(signIn(input, false)).rejects.toMatchObject({
+      code: "RATE_LIMITED",
+    });
+    const [after] =
+      await db()`SELECT count(*)::int AS count FROM sessions WHERE user_id = ${owner.actor.userId}`;
+    expect(after.count).toBe(before.count);
+    await db()`UPDATE rate_limits SET window_start = now() - interval '16 minutes' WHERE key = ${key}`;
+    await expect(signIn(input, false)).resolves.toHaveProperty("token");
+    const [limit] =
+      await db()`SELECT attempts FROM rate_limits WHERE key = ${key}`;
+    expect(limit.attempts).toBe(1);
   });
 });

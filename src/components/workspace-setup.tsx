@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import type { WorkspaceData } from "@/client/types";
-import { createWorkspace, saveMember } from "./commands";
+import { workspaceInput, memberInput } from "@/domain/contracts";
+import { createWorkspace, saveMember } from "@/client/commands";
 
 export function WorkspaceForm({
   onCreated,
@@ -25,9 +26,11 @@ export function WorkspaceForm({
           const data = new FormData(event.currentTarget);
           setBusy(true);
           try {
-            const result = await createWorkspace({
-              name: data.get("name"),
-            });
+            const result = await createWorkspace(
+              workspaceInput.parse({
+                name: data.get("name"),
+              }),
+            );
             await onCreated(result.id);
           } catch (error) {
             setError(
@@ -103,10 +106,13 @@ export function Members({
             setBusy(true);
             setError("");
             try {
-              await saveMember(workspaceId, {
-                email: values.get("email"),
-                role: values.get("role"),
-              });
+              await saveMember(
+                workspaceId,
+                memberInput.parse({
+                  email: values.get("email"),
+                  role: values.get("role"),
+                }),
+              );
               await refresh();
               form.reset();
             } catch (error) {

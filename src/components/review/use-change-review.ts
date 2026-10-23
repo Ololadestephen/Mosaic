@@ -2,8 +2,12 @@
 
 import { useEffect, useState } from "react";
 import type { BatchResult, Proposal } from "@/client/types";
-import { applyProposal, loadProposal, lookupOperation } from "../commands";
-import { ApiError } from "../api";
+import {
+  applyProposal,
+  loadProposal,
+  lookupOperation,
+} from "@/client/commands";
+import { ApiError } from "@/client/api";
 import {
   clearApplyAttempt,
   readApplyAttempt,
@@ -59,7 +63,11 @@ export function useChangeReview(
         if (!active) return;
         setDraft(draft);
         if (draft.state !== "draft") {
-          sessionStorage.removeItem(selectionKey(workspaceId, changeSetId));
+          try {
+            sessionStorage.removeItem(selectionKey(workspaceId, changeSetId));
+          } catch {
+            // Optional selection persistence must not block a server-confirmed receipt.
+          }
           clearApplyAttempt(workspaceId, changeSetId);
           setAttempt(null);
           return;
@@ -87,14 +95,49 @@ export function useChangeReview(
 
   useEffect(() => {
     if (!draft || draft.state !== "draft") return;
-    sessionStorage.setItem(
-      selectionKey(workspaceId, changeSetId),
-      JSON.stringify(selected),
-    );
+    try {
+      sessionStorage.setItem(
+        selectionKey(workspaceId, changeSetId),
+        JSON.stringify(selected),
+      );
+    } catch {
+      // Selection is optional; saving the exact apply intent remains mandatory.
+    }
   }, [draft, selected, workspaceId, changeSetId]);
 
+  function confirmCommit(committed: BatchResult) {
+    setResult(committed);
+    setRejected(false);
+    setDraft((current) =>
+      current ? { ...current, state: "applied" } : current,
+    );
+    clearApplyAttempt(workspaceId, changeSetId);
+    setAttempt(null);
+  }
+
+  async function refreshCommitted() {
+    try {
+      await reload();
+      await onApplied();
+      setError("");
+    } catch {
+      setError(
+        "Changes committed. The latest view could not be loaded; refresh the saved result without applying again.",
+      );
+    }
+  }
+
+  async function retryRefresh() {
+    setBusy(true);
+    try {
+      await refreshCommitted();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function apply() {
-    if (!draft) return;
+    if (!draft || draft.state !== "draft" || result) return;
     setBusy(true);
     setError("");
     try {
@@ -108,9 +151,8 @@ export function useChangeReview(
       setAttempt(original);
       const { operationKey, ...body } = original;
       const result = await applyProposal(workspaceId, body, operationKey);
-      setResult(result);
-      await reload();
-      await onApplied();
+      confirmCommit(result);
+      await refreshCommitted();
     } catch (error) {
       setRejected(
         error instanceof ApiError &&
@@ -136,9 +178,8 @@ export function useChangeReview(
         "apply",
         attempt.operationKey,
       );
-      setResult(result);
-      await reload();
-      await onApplied();
+      confirmCommit(result);
+      await refreshCommitted();
     } catch (error) {
       setError(
         error instanceof Error
@@ -155,13 +196,28 @@ export function useChangeReview(
     setLoadAttempt((attempt) => attempt + 1);
   }
 
-  async function resetSelection() {
-    clearApplyAttempt(workspaceId, changeSetId);
-    setAttempt(null);
-    setRejected(false);
-    setSelected([]);
+  async function discardApplyAttemptAndReload() {
+    setBusy(true);
     setError("");
-    await reload();
+    try {
+      // A rejected request can be replaced only after its old intent is removed.
+      if (!clearApplyAttempt(workspaceId, changeSetId))
+        throw new Error(
+          "Browser recovery storage could not be cleared. Keep the original operation for recovery.",
+        );
+      setAttempt(null);
+      setRejected(false);
+      setSelected([]);
+      await reload();
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Could not reload the proposal.",
+      );
+    } finally {
+      setBusy(false);
+    }
   }
 
   return {
@@ -177,7 +233,8 @@ export function useChangeReview(
     apply,
     recover,
     retryLoad,
-    resetSelection,
+    retryRefresh,
+    discardApplyAttemptAndReload,
     reload,
   };
 }

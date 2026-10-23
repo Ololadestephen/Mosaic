@@ -139,7 +139,12 @@ export function ChangeReview({
       )}
       {error && (
         <p className="error" role="alert">
-          {error}
+          {error}{" "}
+          {review.result && (
+            <button disabled={review.busy} onClick={review.retryRefresh}>
+              Refresh saved result
+            </button>
+          )}
         </p>
       )}
       {draft.questions.length > 0 && (
@@ -194,7 +199,7 @@ export function ChangeReview({
           operationKey={review.attempt?.operationKey}
           onApply={review.apply}
           onRecover={review.recover}
-          onReset={review.resetSelection}
+          onReset={review.discardApplyAttemptAndReload}
         />
       )}
     </div>

@@ -9,6 +9,7 @@ const privateNames = new Set([
   ".local",
   ".desloppify",
   ".git",
+  "__pycache__",
   "pgdata",
   "backups",
   "credentials",
@@ -23,7 +24,7 @@ export function assertPublicPath(path: string) {
       (part) =>
         privateNames.has(part) ||
         (part.startsWith(".env") && part !== ".env.example") ||
-        /\.(log|dump|backup|bak|sqlite|sqlite3|db|pem|key|p12|pfx)$/.test(
+        /\.(log|dump|backup|bak|sqlite|sqlite3|db|pem|key|p12|pfx|pyc)$/.test(
           part,
         ) ||
         /^(pg_version|pg_hba\.conf|pg_ident\.conf|postgresql\.conf)$/.test(

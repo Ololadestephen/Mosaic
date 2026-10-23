@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { api, ApiError } from "@/components/api";
+import { api, ApiError } from "@/client/api";
 
 afterEach(() => {
   vi.unstubAllGlobals();

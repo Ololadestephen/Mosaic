@@ -1,6 +1,7 @@
 import "server-only";
 import type { Actor, Role } from "@/domain/contracts";
 import { DomainError, requireCondition } from "@/domain/errors";
+import { reportError } from "../diagnostics";
 import { db, type Transaction } from "../db/client";
 
 async function authorize(
@@ -47,10 +48,11 @@ export async function inWorkspace<T>(
   } catch (error) {
     if (error instanceof DomainError) throw error;
     if (isDatabaseError(error)) {
-      console.error({ type: "DatabaseError", code: error.code });
+      reportError("workspace-transaction", error);
       throw new DomainError(
         "UNAVAILABLE",
         "The change was not saved. Try the same operation again.",
+        { cause: error },
       );
     }
     throw error;

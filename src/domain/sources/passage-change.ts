@@ -94,7 +94,8 @@ function matchedLineHunks(
   for (const [oldIndex, newIndex] of matches) {
     const oldRow = before[oldIndex];
     const newRow = after[newIndex];
-    if (!oldRow || !newRow) continue;
+    if (!oldRow || !newRow)
+      throw new Error("Internal diff alignment index is invalid.");
     hunks.push({
       oldStart: oldRow.start,
       oldEnd: oldRow.start + oldRow.text.length,
@@ -129,7 +130,7 @@ function unmatchedLineHunks(
       runStart,
       index,
     );
-    if (gap) hunks.push(...gap);
+    hunks.push(...gap);
   }
   return hunks;
 }
@@ -142,13 +143,14 @@ function lineGap(
   revision: string,
   runStart: number,
   runEnd: number,
-): Hunk[] | undefined {
+): Hunk[] {
   const first = before[runStart];
   const last = before[runEnd - 1];
-  if (!first || !last) return;
+  if (!first || !last) throw new Error("Internal diff gap is empty.");
   const previous = runStart === 0 ? -1 : matches.get(runStart - 1);
   const next = runEnd === before.length ? after.length : matches.get(runEnd);
-  if (previous === undefined || next === undefined) return;
+  if (previous === undefined || next === undefined)
+    throw new Error("Internal diff gap has unmatched boundaries.");
   const oldStart = first.start;
   const newStart =
     previous === -1 ? 0 : after[previous].start + after[previous].text.length;

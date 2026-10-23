@@ -1,3 +1,4 @@
+import { reportError } from "./diagnostics";
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { cookies } from "next/headers";
@@ -74,15 +75,14 @@ export async function handleRequest(
         },
         { status: 400 },
       );
-    if (error instanceof DomainError)
+    if (error instanceof DomainError) {
+      if (error.cause) reportError("http-request", error, requestId);
       return NextResponse.json(
         { error: error.message, code: error.code, requestId },
         { status: error.status },
       );
-    console.error({
-      requestId,
-      type: error instanceof Error ? error.name : "UnknownError",
-    });
+    }
+    reportError("http-request", error, requestId);
     return NextResponse.json(
       {
         error:

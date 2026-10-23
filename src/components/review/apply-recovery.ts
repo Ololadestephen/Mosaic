@@ -34,5 +34,11 @@ export function saveApplyAttempt(workspaceId: string, attempt: ApplyAttempt) {
 }
 
 export function clearApplyAttempt(workspaceId: string, changeSetId: string) {
-  sessionStorage.removeItem(storageKey(workspaceId, changeSetId));
+  try {
+    sessionStorage.removeItem(storageKey(workspaceId, changeSetId));
+    return true;
+  } catch {
+    // Cleanup is optional after the server has confirmed the immutable receipt.
+    return false;
+  }
 }

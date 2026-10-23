@@ -72,12 +72,19 @@ export function ProposalGroups({
                 item={item}
                 index={itemIndex.get(item.key) ?? 0}
                 draft={draft}
-                selected={selected}
-                canEdit={canEdit}
-                busy={busy}
-                attempted={attempted}
+                selected={selected.includes(item.key)}
+                disabled={
+                  !canEdit || busy || attempted || draft.state !== "draft"
+                }
+                canEdit={canEdit && !attempted && draft.state === "draft"}
                 workspaceId={workspaceId}
-                onSelectedChange={onSelectedChange}
+                onToggle={(checked) =>
+                  onSelectedChange(
+                    checked
+                      ? [...selected, item.key]
+                      : selected.filter((key) => key !== item.key),
+                  )
+                }
                 onSaved={onSaved}
               />
             ))}
@@ -94,21 +101,19 @@ function ProposalRow({
   draft,
   selected,
   canEdit,
-  busy,
-  attempted,
+  disabled,
   workspaceId,
-  onSelectedChange,
+  onToggle,
   onSaved,
 }: {
   item: Proposal["items"][number];
   index: number;
   draft: Proposal;
-  selected: string[];
+  selected: boolean;
   canEdit: boolean;
-  busy: boolean;
-  attempted: boolean;
+  disabled: boolean;
   workspaceId: string;
-  onSelectedChange: (selected: string[]) => void;
+  onToggle: (selected: boolean) => void;
   onSaved: () => Promise<void>;
 }) {
   const task =
@@ -139,14 +144,10 @@ function ProposalRow({
           <input
             type="checkbox"
             aria-label={`Select ${title}: ${item.key}`}
-            checked={selected.includes(item.key)}
-            disabled={!canEdit || busy || attempted || draft.state !== "draft"}
+            checked={selected}
+            disabled={disabled}
             onChange={(event) => {
-              onSelectedChange(
-                event.target.checked
-                  ? [...selected, item.key]
-                  : selected.filter((key) => key !== item.key),
-              );
+              onToggle(event.target.checked);
             }}
           />
           <span>
@@ -219,10 +220,12 @@ function ProposalRow({
           </blockquote>
         );
       })}
-      {canEdit && !attempted && draft.state === "draft" && (
+      {canEdit && (
         <EditValue
           item={item}
-          draft={draft}
+          proposalId={draft.id}
+          expectedRevision={draft.revision}
+          members={draft.members}
           workspaceId={workspaceId}
           onSaved={onSaved}
         />

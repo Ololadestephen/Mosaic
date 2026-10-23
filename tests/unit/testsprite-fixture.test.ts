@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fixtureIds } from "../../scripts/testsprite-fixture";
+import { fixtureIds } from "../../scripts/testsprite/seed-preview";
 
 const SHA = "c277e5558b9cccd29c4ea771aebdb32238577e40";
 

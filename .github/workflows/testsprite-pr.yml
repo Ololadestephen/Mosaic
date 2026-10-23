@@ -68,7 +68,7 @@ jobs:
           DATABASE_URL: ${{ secrets.TESTSPRITE_PREVIEW_DATABASE_URL }}
           FIXTURE_OWNER_EMAIL: ${{ secrets.TESTSPRITE_FIXTURE_OWNER_EMAIL }}
           SHA: ${{ steps.head.outputs.sha }}
-        run: npx --no-install tsx scripts/testsprite-fixture.ts
+        run: npx --no-install tsx scripts/testsprite/testsprite-fixture.ts
 
       - name: Prepare TestSprite CLI
         env:

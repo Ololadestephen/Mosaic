@@ -29,8 +29,16 @@ export async function readBody(request: Request): Promise<unknown> {
     return JSON.parse(text);
   } catch (error) {
     if (error instanceof DomainError) throw error;
-    throw new DomainError("INVALID_INPUT", "Request must contain valid JSON.");
+    throw new DomainError("INVALID_INPUT", "Request must contain valid JSON.", {
+      cause: error,
+    });
   } finally {
-    await reader.cancel();
+    try {
+      await reader.cancel();
+    } catch {
+      // Cleanup must not replace the primary parse/size error or successful body.
+    } finally {
+      reader.releaseLock();
+    }
   }
 }

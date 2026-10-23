@@ -16,7 +16,8 @@
     "tsconfig.json",
     "package-lock.json",
     ".env.example",
-    "README.md"
+    "README.md",
+    "!scripts/testsprite/**"
   ],
   "scripts": {
     "dev": "next dev --hostname localhost",

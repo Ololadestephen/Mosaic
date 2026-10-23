@@ -28,11 +28,12 @@ export type AnalysisContext = {
   restrictedTo: string | null;
 };
 
-export async function analysisContext(
+async function loadContext(
   tx: Transaction,
   actor: Actor,
   workspaceId: string,
   versionId: string,
+  taskIds?: string[],
 ): Promise<AnalysisContext> {
   const [source] = await tx<
     (SourceVersion & { visibility: string; ownerId: string })[]
@@ -42,12 +43,7 @@ export async function analysisContext(
   // Contexts of different visibility never mix. A private source cannot rewrite a shared task.
   const tasks = await tx<
     Task[]
-  >`SELECT id, workspace_id AS "workspaceId", title, status, assignee_id AS "assigneeId", due_date::text AS "dueDate", revision, lineage, archived, restricted_to AS "restrictedTo" FROM tasks WHERE workspace_id = ${workspaceId} AND archived = false AND restricted_to IS NOT DISTINCT FROM ${restrictedTo}::uuid ORDER BY id LIMIT 151`;
-  requireCondition(
-    tasks.length <= 150,
-    "INVALID_INPUT",
-    "This source context exceeds the initial 150-task analysis limit.",
-  );
+  >`SELECT id, workspace_id AS "workspaceId", title, status, assignee_id AS "assigneeId", due_date::text AS "dueDate", revision, lineage, archived, restricted_to AS "restrictedTo" FROM tasks WHERE workspace_id = ${workspaceId} AND archived = false AND restricted_to IS NOT DISTINCT FROM ${restrictedTo}::uuid AND ${taskIds === undefined ? tx`true` : taskIds.length ? tx`id IN ${tx(taskIds)}` : tx`false`} ORDER BY id LIMIT ${taskIds === undefined ? 151 : taskIds.length}`;
   const members = await tx<
     { id: string; name: string }[]
   >`SELECT u.id, u.name FROM memberships m JOIN users u ON u.id = m.user_id WHERE m.workspace_id = ${workspaceId} ORDER BY u.id`;
@@ -62,6 +58,32 @@ export async function analysisContext(
     memberIds: members.map((member) => member.id),
     restrictedTo,
   };
+}
+
+// The model input ceiling applies only when preparing a new generation.
+export async function analysisContext(
+  tx: Transaction,
+  actor: Actor,
+  workspaceId: string,
+  versionId: string,
+): Promise<AnalysisContext> {
+  const context = await loadContext(tx, actor, workspaceId, versionId);
+  requireCondition(
+    context.tasks.length <= 150,
+    "INVALID_INPUT",
+    "This source context exceeds the initial 150-task analysis limit.",
+  );
+  return context;
+}
+
+export function proposalContext(
+  tx: Transaction,
+  actor: Actor,
+  workspaceId: string,
+  versionId: string,
+  taskIds: string[],
+) {
+  return loadContext(tx, actor, workspaceId, versionId, [...new Set(taskIds)]);
 }
 
 export async function saveProposal(
@@ -101,11 +123,14 @@ export async function getProposal(
     const draft = await draftRecord(tx, workspaceId, changeSetId);
     requireCondition(draft, "NOT_FOUND", "Change set not found.");
     assertVisible(draft.restrictedTo, actor);
-    const context = await analysisContext(
+    const context = await proposalContext(
       tx,
       actor,
       workspaceId,
       draft.sourceVersionId,
+      draft.items.flatMap((item) =>
+        item.kind === "update" ? [item.taskId] : [],
+      ),
     );
     const [applied] = await tx<
       { changes: FieldChange[] }[]

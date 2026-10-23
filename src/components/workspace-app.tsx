@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Account, WorkspaceData } from "@/client/types";
-import { listWorkspaces, loadWorkspace, signOut } from "./commands";
+import { listWorkspaces, loadWorkspace, signOut } from "@/client/commands";
 import { NewTask } from "./tasks/task-board";
 import { TaskDetailPanel } from "./tasks/task-detail";
 import { NewSource } from "./sources/source-library";
