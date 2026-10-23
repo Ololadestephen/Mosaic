@@ -78,6 +78,15 @@ export async function selectWorkspace(page: Page, name: string) {
   ).toBeVisible();
 }
 
+// Board and Sources share a creation button. Wait for the destination before using it.
+export async function openSourceLibrary(page: Page) {
+  await page.getByRole("link", { name: "Sources", exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/sources$/);
+  await expect(
+    page.getByRole("heading", { name: "Sources", exact: true }),
+  ).toBeVisible();
+}
+
 export async function inspectAppVerification(
   workspaceId: string,
   phase: "before" | "review" | "after",

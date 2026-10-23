@@ -14,6 +14,7 @@ import {
   inspectAppVerification,
   selectWorkspace,
   signInFixture,
+  openSourceLibrary,
 } from "./fixtures";
 
 const evidence = ".local/evidence/app-verification";
@@ -100,10 +101,13 @@ test("App check: manual task and immutable source revision persist", async ({
     page.getByRole("dialog", { name: manualTask }).getByLabel("Due date"),
   ).toHaveValue("2026-11-05");
   await page.getByRole("button", { name: "Close dialog" }).click();
+  await expect(page).toHaveURL(/\/app$/);
+  await expect(createdTask).not.toBeVisible();
 
-  await page.getByRole("link", { name: "Sources", exact: true }).click();
+  await openSourceLibrary(page);
   await page.getByRole("button", { name: "Bring a source" }).click();
   const sourceDialog = page.getByRole("dialog", { name: "Bring a source" });
+  await expect(sourceDialog).toBeVisible();
   await sourceDialog.getByLabel("Source title").fill(manualSource);
   await sourceDialog.getByLabel("Source text").fill(manualV1);
   await sourceDialog.getByRole("button", { name: "Save source" }).click();
@@ -140,6 +144,57 @@ test("App check: manual task and immutable source revision persist", async ({
       .getByLabel("Source revision", { exact: true })
       .locator("option:checked"),
   ).toContainText("Version 2");
+});
+
+test("source creation waits for Sources navigation while the old Board button remains visible", async ({
+  page,
+}) => {
+  const seed = await seedAppVerification();
+  await signInFixture(page, seed);
+  await selectWorkspace(page, seed.workspaceName);
+  let release!: () => void;
+  let intercepted!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const navigation = new Promise<void>((resolve) => {
+    intercepted = resolve;
+  });
+  await page.route("**/app/sources*", async (route) => {
+    if (route.request().headers().rsc !== "1") return route.continue();
+    intercepted();
+    await gate;
+    await route.continue();
+  });
+  const open = (async () => {
+    await openSourceLibrary(page);
+    await page.getByRole("button", { name: "Bring a source" }).click();
+  })();
+  try {
+    await navigation;
+    await expect(
+      page.getByRole("heading", { name: "A clear view of what’s next." }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Bring a source" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("dialog", { name: "Bring a source" }),
+    ).toHaveCount(0);
+    release();
+    await open;
+    const dialog = page.getByRole("dialog", { name: "Bring a source" });
+    await expect(dialog).toBeVisible();
+    await dialog
+      .getByLabel("Source title")
+      .fill("Synthetic navigation regression");
+    await expect(dialog.getByLabel("Source title")).toHaveValue(
+      "Synthetic navigation regression",
+    );
+  } finally {
+    release();
+    await page.unroute("**/app/sources*");
+  }
 });
 
 test("App check: review, selected apply, receipt, and conflict-aware undo", async ({

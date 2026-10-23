@@ -45,7 +45,7 @@ npm run build
 npm run check:package
 ```
 
-Start the local database before integration or browser tests. Browser tests use installed Chrome, a separate local server on port 3100 (override with `MOSAIC_E2E_PORT` if occupied), a dedicated database ending in `_test`, separate signed-in contexts and labelled deterministic AI fixtures. They never call live AI or reset production data. Unit tests mock provider HTTP to exercise failures; PostgreSQL tests exercise real locking, rollback, permissions, idempotency, the shared Gemini cap, safe diagnostics and field lineage. Fixtures do not prove live model accuracy.
+Start the local database before integration or browser tests. Browser tests use installed Chrome, a separate local server on port 3100 (override with `MOSAIC_E2E_PORT` if occupied), a dedicated database ending in `_test`, separate signed-in contexts and labelled deterministic AI fixtures. They never call live AI or reset production data. Unit tests mock provider HTTP to exercise failures; PostgreSQL tests exercise real locking, rollback, permissions, idempotency, the shared Gemini cap, safe diagnostics and field lineage. Fixtures do not prove live model accuracy. Browser navigation waits for the destination URL and heading before using shared creation controls; a delayed-navigation regression checks that the source dialog opens on the intended page.
 
 Explicit source revisions can be compared side by side, with related proposal and review-flag links; the columns stack on mobile. Citation links focus the exact immutable passage. A comparison never authorizes task changes.
 
