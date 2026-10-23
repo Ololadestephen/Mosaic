@@ -160,7 +160,7 @@ jobs:
       PREPARED_AT: ${{ needs.prepare.outputs.prepared_at }}
       FIXTURE_RUN: ${{ needs.prepare.outputs.fixture_run }}
       CHANGE_SET: ${{ needs.prepare.outputs.change_set }}
-      APP_EVIDENCE_DIR: ${{ runner.temp }}/mosaic-app-evidence
+      APP_EVIDENCE_DIR: ${{ github.workspace }}/.local/native-app-evidence
       PREVIEW_ORIGIN: https://mosaic-git-codex-hosted-previe-7f5fea-ololade-stephens-projects.vercel.app
     steps:
       - name: Require successful authorized preparation
@@ -217,7 +217,7 @@ jobs:
         with:
           name: native-app-verification-${{ needs.prepare.outputs.sha }}
           path: |
-            ${{ runner.temp }}/mosaic-app-evidence/summary.json
-            ${{ runner.temp }}/mosaic-app-evidence/export-audit.json
-            ${{ runner.temp }}/mosaic-app-evidence/database.json
+            ${{ env.APP_EVIDENCE_DIR }}/summary.json
+            ${{ env.APP_EVIDENCE_DIR }}/export-audit.json
+            ${{ env.APP_EVIDENCE_DIR }}/database.json
           if-no-files-found: ignore
