@@ -81,6 +81,14 @@ jobs:
           printf '[default]\napi_key = %s\napi_url = https://api.testsprite.com\n' "$TESTSPRITE_API_KEY" > "$HOME/.testsprite/credentials"
           chmod 600 "$HOME/.testsprite/credentials"
 
+      - name: Verify reviewed scripts before running
+        run: |
+          set -euo pipefail
+          for id in "$TESTSPRITE_AUTH_ID" "$TESTSPRITE_MANUAL_ID" "$TESTSPRITE_GUARD_ID" "$TESTSPRITE_FIXTURE_ID"; do
+            npx -y @testsprite/testsprite-cli@0.2.0 --output json test code get "$id" > "code-before-${id}.json"
+          done
+          python3 scripts/testsprite/strict-pins.py before scripts/testsprite/strict-pins.json .
+
       - name: Run required TestSprite cases
         env:
           BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
@@ -105,27 +113,9 @@ jobs:
               status=1
             fi
             echo "::endgroup::"
+            npx -y @testsprite/testsprite-cli@0.2.0 --output json test code get "$id" > "code-after-${id}.json" || status=1
           done
-          python3 - <<'PY'
-          import glob,json,re
-          runs=[]
-          for path in glob.glob('testsprite-run-*.json'):
-              try:
-                  data=json.load(open(path))
-              except Exception:
-                  continue
-              run=data.get('run',data)
-              runs.append({
-                  'runId':run.get('runId'),
-                  'testId':run.get('testId'),
-                  'testTitle':run.get('testTitle'),
-                  'status':run.get('status'),
-                  'failureKind':run.get('failureKind'),
-                  'error':re.sub(r'(x-vercel-protection-bypass=)[^&\s]+', r'\1[redacted]', run.get('error') or ''),
-              })
-          print(json.dumps(runs,indent=2))
-          open('testsprite-summary.json','w').write(json.dumps(runs,indent=2)+'\n')
-          PY
+          python3 scripts/testsprite/strict-pins.py after scripts/testsprite/strict-pins.json . "$SHA" "$PREVIEW_ORIGIN" || status=1
           exit $status
 
       - name: Upload sanitized evidence
