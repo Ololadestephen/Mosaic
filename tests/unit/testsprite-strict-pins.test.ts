@@ -7,6 +7,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const sha = "b".repeat(40);
 const origin = "https://preview.example.test";
+const notBefore = "2026-10-24T08:00:00Z";
+const fixtureRun = "123-2";
 const scripts: Record<string, string> = {
   "test-one": "async def run_test():\n    pass\n",
   "test-two": "async def run_test():\n    assert True\n",
@@ -28,6 +30,11 @@ function writeCode(
   );
 }
 
+function target(id: string, run = fixtureRun, commit = sha) {
+  const fixture = id === "test-two" ? `&fixture_run=${run}` : "";
+  return `${origin}/?x-vercel-protection-bypass=bypass-secret&expected_sha=${commit}${fixture}`;
+}
+
 function writeRun(id: string, overrides: Record<string, unknown> = {}) {
   writeFileSync(
     join(directory, `testsprite-run-${id}.json`),
@@ -37,6 +44,8 @@ function writeRun(id: string, overrides: Record<string, unknown> = {}) {
       status: "passed",
       codeVersion: null,
       replay: { path: "replay" },
+      targetUrl: target(id),
+      startedAt: "2026-10-24T08:01:00.123Z",
       ...overrides,
     }),
   );
@@ -53,6 +62,8 @@ function pinsCheck(mode: "before" | "after") {
       directory,
       sha,
       origin,
+      notBefore,
+      fixtureRun,
     ],
     { encoding: "utf8" },
   );
@@ -67,7 +78,11 @@ beforeEach(() => {
       Object.fromEntries(
         Object.entries(scripts).map(([id, code]) => [
           id,
-          { codeVersion: `v-${id}`, sha256: digest(code) },
+          {
+            codeVersion: `v-${id}`,
+            sha256: digest(code),
+            ...(id === "test-two" ? { fixture: true } : {}),
+          },
         ]),
       ),
     ),
@@ -133,6 +148,36 @@ describe("strict TestSprite script pins", () => {
     ],
     ["a missing run identity", () => writeRun("test-one", { runId: "" })],
     [
+      "a reported version other than the reviewed one",
+      () => writeRun("test-one", { codeVersion: "v-other" }),
+    ],
+    [
+      "a run against another origin",
+      () =>
+        writeRun("test-one", {
+          targetUrl: `https://other.example.test/?expected_sha=${sha}`,
+        }),
+    ],
+    [
+      "a run against another commit",
+      () =>
+        writeRun("test-one", {
+          targetUrl: target("test-one", fixtureRun, "c".repeat(40)),
+        }),
+    ],
+    [
+      "a fixture run against another fixture",
+      () => writeRun("test-two", { targetUrl: target("test-two", "123-1") }),
+    ],
+    [
+      "a result from before this attempt",
+      () => writeRun("test-one", { startedAt: "2026-10-24T07:59:59Z" }),
+    ],
+    [
+      "a result without a start time",
+      () => writeRun("test-one", { startedAt: null }),
+    ],
+    [
       "a missing result",
       () => rmSync(join(directory, "testsprite-run-test-one.json")),
     ],
@@ -161,6 +206,25 @@ describe("strict TestSprite script pins", () => {
       "utf8",
     );
     expect(text).not.toContain("secret-value");
+    expect(text).not.toContain("bypass-secret");
+  });
+
+  it("accepts the reviewed version when the provider reports it", () => {
+    writeRun("test-one", { codeVersion: "v-test-one" });
+    expect(pinsCheck("after").status).toBe(0);
+  });
+
+  it("gives every workflow attempt its own TestSprite runs", () => {
+    const workflow = readFileSync(
+      ".github/workflows/testsprite-pr.yml",
+      "utf8",
+    );
+    expect(workflow).toContain(
+      '--idempotency-key "mosaic-pr-${SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${id}"',
+    );
+    expect(workflow).toContain(
+      "FIXTURE_RUN: ${{ github.run_id }}-${{ github.run_attempt }}",
+    );
   });
 
   it("pins exactly the four cases the workflow runs", () => {
@@ -177,5 +241,9 @@ describe("strict TestSprite script pins", () => {
       readFileSync("scripts/testsprite/strict-pins.json", "utf8"),
     );
     expect(Object.keys(reviewed).sort()).toEqual([...ids].sort());
+    const fixtureId = workflow.match(/TESTSPRITE_FIXTURE_ID: (\S+)/)![1]!;
+    expect(Object.keys(reviewed).filter((id) => reviewed[id].fixture)).toEqual([
+      fixtureId,
+    ]);
   });
 });

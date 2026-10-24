@@ -13,6 +13,7 @@
   },
   "cbc840c3-9291-48ff-b8ae-865296076ff3": {
     "codeVersion": "v-d24dc706fd7e",
-    "sha256": "8ea7ade3ed900477729e12581d38fbde2810cf1f83a8b7bf829afce8f66db303"
+    "sha256": "8ea7ade3ed900477729e12581d38fbde2810cf1f83a8b7bf829afce8f66db303",
+    "fixture": true
   }
 }

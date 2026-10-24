@@ -7,7 +7,9 @@ import hashlib
 import json
 import re
 import sys
+from datetime import datetime
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 
 
 def saved_script(directory, phase, test_id):
@@ -29,7 +31,24 @@ def check_code(pins, directory, phase):
     return problems
 
 
-def check_runs(pins, directory, sha, origin):
+def instant(value):
+    return datetime.fromisoformat(value.replace('Z', '+00:00'))
+
+
+def target_problems(run, pin, sha, origin, fixture_run):
+    target = urlsplit(run.get('targetUrl') or '')
+    query = parse_qs(target.query)
+    problems = []
+    if f'{target.scheme}://{target.netloc}' != origin:
+        problems.append('ran against another origin')
+    if query.get('expected_sha') != [sha]:
+        problems.append('ran against another commit')
+    if pin.get('fixture') and query.get('fixture_run') != [fixture_run]:
+        problems.append('ran against another fixture')
+    return problems
+
+
+def check_runs(pins, directory, sha, origin, not_before, fixture_run):
     problems, runs = check_code(pins, directory, 'after'), []
     for test_id, pin in pins.items():
         try:
@@ -45,11 +64,20 @@ def check_runs(pins, directory, sha, origin):
             problems.append(f'{test_id}: status {run.get("status")}')
         if replay != 'replay':
             problems.append(f'{test_id}: not a saved-script replay ({replay})')
+        if run.get('codeVersion') not in (None, pin['codeVersion']):
+            problems.append(f'{test_id}: reported version {run.get("codeVersion")} is not the reviewed one')
+        problems.extend(f'{test_id}: {problem}' for problem in target_problems(run, pin, sha, origin, fixture_run))
+        try:
+            if instant(run['startedAt']) < instant(not_before):
+                problems.append(f'{test_id}: result predates this attempt')
+        except (KeyError, TypeError, AttributeError, ValueError):
+            problems.append(f'{test_id}: run result lacks a valid start time')
         runs.append({
             'runId': run.get('runId'),
             'testId': run.get('testId'),
             'testTitle': run.get('testTitle'),
             'status': run.get('status'),
+            'startedAt': run.get('startedAt'),
             'failureKind': run.get('failureKind'),
             'error': re.sub(r'(x-vercel-protection-bypass=)[^&\s]+', r'\1[redacted]', run.get('error') or ''),
             'replayPath': replay,
@@ -57,8 +85,8 @@ def check_runs(pins, directory, sha, origin):
             'reviewedCodeVersion': pin['codeVersion'],
             'reviewedSha256': pin['sha256'],
         })
-    return problems, {'commit': sha, 'targetOrigin': origin, 'runs': runs, 'problems': problems,
-                      'passed': not problems}
+    return problems, {'commit': sha, 'targetOrigin': origin, 'fixtureRun': fixture_run,
+                      'notBefore': not_before, 'runs': runs, 'problems': problems, 'passed': not problems}
 
 
 def main():
@@ -67,7 +95,7 @@ def main():
     if mode == 'before':
         problems = check_code(pins, directory, 'before')
     else:
-        problems, summary = check_runs(pins, directory, *sys.argv[4:6])
+        problems, summary = check_runs(pins, directory, *sys.argv[4:8])
         Path(directory, 'testsprite-summary.json').write_text(json.dumps(summary, indent=2) + '\n')
         print(json.dumps(summary, indent=2))
     for problem in problems:
