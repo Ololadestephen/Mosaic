@@ -5,6 +5,7 @@ import {
   callProvider,
   freeModel,
 } from "@/server/ai/openrouter";
+import { geminiPrompt } from "@/server/ai/gemini-prompt";
 
 beforeEach(() => {
   vi.stubEnv("DATABASE_URL", "postgresql://local@localhost/mosaic_test");
@@ -114,7 +115,7 @@ describe("provider boundary with mocked HTTP, never live AI", () => {
     expect(parsed.response_format.json_schema.strict).toBe(true);
     expect(parsed.messages[0].content).toContain("untrusted DATA");
     expect(parsed.messages[0].content).toContain(
-      "When the source cancels or replaces a task, do not change that task's status",
+      "propose no update of any field for that task, not even to todo or in_progress",
     );
     expect(parsed.reasoning.effort).toBe("none");
     expect(parsed.provider.require_parameters).toBe(true);
@@ -158,5 +159,34 @@ describe("OpenRouter raw capture and validated diagnostics (mocked only)", () =>
         throw primary;
       }),
     ).rejects.toBe(primary);
+  });
+});
+
+describe("Gemini prompt reconciliation rules", () => {
+  it("forbids any update to a cancelled or replaced task", () => {
+    const source = {
+      id: randomUUID(),
+      sourceId: randomUUID(),
+      number: 1,
+      text: "Reporting server: do not rebuild it.",
+      predecessorId: null,
+    };
+    const prompt = geminiPrompt(
+      {
+        source,
+        versions: [source],
+        tasks: [],
+        memberIds: [],
+        members: [],
+        restrictedTo: null,
+      },
+      1000,
+    );
+    expect(prompt).toContain(
+      "propose no update of any field for that task, not even to todo or in_progress",
+    );
+    expect(prompt).toContain(
+      "never emit an update item for a task the source cancels, stops or replaces",
+    );
   });
 });
