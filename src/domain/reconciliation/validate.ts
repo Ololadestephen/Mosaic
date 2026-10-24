@@ -97,5 +97,21 @@ export function validateAnalysis(
       validateField(item.field, item.value, members);
     }
   }
-  return parsed;
+  return { ...parsed, preserved: withoutChangedWork(parsed, tasks) };
+}
+
+// "What stays as it is" must not name work the same proposal changes or creates.
+function withoutChangedWork(output: AnalysisOutput, tasks: Map<string, Task>) {
+  const changed = new Set<string>();
+  for (const item of output.items) {
+    if (item.kind === "update") {
+      const task = tasks.get(item.taskId);
+      changed.add(item.taskId.toLowerCase());
+      if (task) changed.add(task.title.toLowerCase());
+    } else if (item.kind === "create") changed.add(item.title.toLowerCase());
+  }
+  return output.preserved.filter((entry) => {
+    const text = entry.toLowerCase();
+    return ![...changed].some((name) => text.includes(name));
+  });
 }

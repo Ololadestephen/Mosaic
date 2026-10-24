@@ -263,6 +263,7 @@ const guard = workflow
   .map((line) => line.replace(/^ {12}/, ""))
   .join("\n");
 const trusted = {
+  number: 1,
   state: "open",
   base: { ref: "main", repo: { full_name: "Ololadestephen/Mosaic" } },
   head: {
@@ -271,6 +272,7 @@ const trusted = {
     repo: { full_name: "Ololadestephen/Mosaic" },
   },
 };
+const requested: number[] = [];
 async function authorize(
   pr: unknown,
   event = "workflow_dispatch",
@@ -279,6 +281,7 @@ async function authorize(
   ref = "refs/heads/main",
 ) {
   const outputs: Record<string, string> = {};
+  requested.length = 0;
   await runInNewContext(`(async () => {${guard}\n})()`, {
     context: {
       repo: { owner: "Ololadestephen", repo: "Mosaic" },
@@ -286,10 +289,19 @@ async function authorize(
       ref,
       payload: {
         inputs: { pr: input },
-        pull_request: { number: 1, head: { sha: eventSha } },
+        pull_request: { number: Number(input), head: { sha: eventSha } },
       },
     },
-    github: { rest: { pulls: { get: async () => ({ data: pr }) } } },
+    github: {
+      rest: {
+        pulls: {
+          get: async ({ pull_number }: { pull_number: number }) => {
+            requested.push(pull_number);
+            return { data: pr };
+          },
+        },
+      },
+    },
     core: {
       setOutput: (key: string, value: string) => {
         outputs[key] = value;
@@ -300,8 +312,18 @@ async function authorize(
 }
 describe("actual workflow trust guard", () => {
   it("accepts trusted dispatch and PR events using the live head", async () => {
-    expect(await authorize(trusted)).toEqual({ sha });
-    expect(await authorize(trusted, "pull_request")).toEqual({ sha });
+    expect(await authorize(trusted)).toEqual({ sha, pr: "1" });
+    expect(await authorize(trusted, "pull_request")).toEqual({ sha, pr: "1" });
+    const later = { ...trusted, number: 8 };
+    expect(await authorize(later, "workflow_dispatch", "8")).toEqual({
+      sha,
+      pr: "8",
+    });
+    expect(requested).toEqual([8]);
+    expect(await authorize(later, "pull_request", "8")).toEqual({
+      sha,
+      pr: "8",
+    });
     expect(workflow).toContain("vars.MOSAIC_NATIVE_APP_APPROVED == 'true'");
     expect(workflow).not.toMatch(/test run|pull_request_target/);
     expect(workflow).toContain("if: always()");
@@ -320,6 +342,16 @@ describe("actual workflow trust guard", () => {
     ).rejects.toThrow();
     await expect(
       authorize(trusted, "workflow_dispatch", "2"),
+    ).rejects.toThrow();
+    for (const input of ["0", "abc", "1 ", "-1", ""])
+      await expect(
+        authorize(trusted, "workflow_dispatch", input),
+      ).rejects.toThrow();
+    await expect(
+      authorize({
+        ...trusted,
+        head: { ...trusted.head, ref: "feature/other" },
+      }),
     ).rejects.toThrow();
     await expect(
       authorize(trusted, "workflow_dispatch", "1", sha, "refs/heads/untrusted"),
@@ -481,10 +513,11 @@ async function publishReadiness(
   eventSha = sha,
   ref = "refs/heads/main",
   input = "1",
+  expectedPr = "1",
 ) {
   const create = vi.fn();
   await runInNewContext(`(async () => {${readinessScript}\n})()`, {
-    process: { env: { EXPECTED_SHA: expectedSha } },
+    process: { env: { EXPECTED_SHA: expectedSha, EXPECTED_PR: expectedPr } },
     context: {
       repo: { owner: "Ololadestephen", repo: "Mosaic" },
       runId: 123,
@@ -492,7 +525,7 @@ async function publishReadiness(
       ref,
       payload: {
         inputs: { pr: input },
-        pull_request: { number: 1, head: { sha: eventSha } },
+        pull_request: { number: Number(input), head: { sha: eventSha } },
       },
     },
     github: {
@@ -560,6 +593,44 @@ describe("actual success-only fixture readiness signal", () => {
     expect(
       await publishReadiness(trusted, sha, "workflow_dispatch"),
     ).toHaveBeenCalledTimes(1);
+    const later = { ...trusted, number: 8 };
+    expect(
+      await publishReadiness(
+        later,
+        sha,
+        "pull_request",
+        sha,
+        "refs/heads/main",
+        "8",
+        "8",
+      ),
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: "Trusted PR 8 fixture and exact native plans prepared",
+      }),
+    );
+    await expect(
+      publishReadiness(
+        later,
+        sha,
+        "pull_request",
+        sha,
+        "refs/heads/main",
+        "8",
+        "1",
+      ),
+    ).rejects.toThrow();
+    await expect(
+      publishReadiness(
+        trusted,
+        sha,
+        "pull_request",
+        sha,
+        "refs/heads/main",
+        "1",
+        "",
+      ),
+    ).rejects.toThrow();
   });
 });
 

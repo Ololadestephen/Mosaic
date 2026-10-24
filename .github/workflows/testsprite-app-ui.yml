@@ -7,9 +7,8 @@ on:
   workflow_dispatch:
     inputs:
       pr:
-        description: Trusted Mosaic PR number (only PR 1 is provisioned)
+        description: Open Mosaic PR from the trusted preview branch
         required: true
-        default: "1"
         type: string
 
 permissions:
@@ -24,11 +23,12 @@ concurrency:
 jobs:
   prepare:
     name: Prepare native App fixture
-    if: vars.MOSAIC_NATIVE_APP_APPROVED == 'true' && (github.event_name == 'workflow_dispatch' || (github.event.pull_request.number == 1 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'codex/hosted-preview-security-tests'))
+    if: vars.MOSAIC_NATIVE_APP_APPROVED == 'true' && (github.event_name == 'workflow_dispatch' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'codex/hosted-preview-security-tests'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     outputs:
       sha: ${{ steps.trust.outputs.sha }}
+      pr: ${{ steps.trust.outputs.pr }}
       fixture_run: ${{ steps.fixture.outputs.run }}
       change_set: ${{ steps.fixture.outputs.change_set }}
       prepared_at: ${{ steps.plans.outputs.prepared_at }}
@@ -43,12 +43,14 @@ jobs:
           script: |
             if (context.repo.owner !== 'Ololadestephen' || context.repo.repo !== 'Mosaic') throw new Error('Wrong repository');
             const number = context.eventName === 'workflow_dispatch' ? context.payload.inputs?.pr : String(context.payload.pull_request?.number);
-            if (number !== '1') throw new Error('Only PR 1 has isolated preview resources');
+            // Every PR from the trusted branch shares the branch preview alias and its isolated database.
+            if (!/^[1-9][0-9]{0,5}$/.test(number ?? '')) throw new Error('Invalid PR number');
             if (context.eventName === 'workflow_dispatch' && !['refs/heads/main', 'refs/heads/codex/hosted-preview-security-tests'].includes(context.ref)) throw new Error('Untrusted dispatch ref');
-            const { data: pr } = await github.rest.pulls.get({ ...context.repo, pull_number: 1 });
-            if (pr.state !== 'open' || pr.base.ref !== 'main' || pr.base.repo.full_name !== 'Ololadestephen/Mosaic' || pr.head.repo?.full_name !== 'Ololadestephen/Mosaic' || pr.head.ref !== 'codex/hosted-preview-security-tests' || !/^[a-f0-9]{40}$/.test(pr.head.sha)) throw new Error('Untrusted PR');
+            const { data: pr } = await github.rest.pulls.get({ ...context.repo, pull_number: Number(number) });
+            if (pr.number !== Number(number) || pr.state !== 'open' || pr.base.ref !== 'main' || pr.base.repo.full_name !== 'Ololadestephen/Mosaic' || pr.head.repo?.full_name !== 'Ololadestephen/Mosaic' || pr.head.ref !== 'codex/hosted-preview-security-tests' || !/^[a-f0-9]{40}$/.test(pr.head.sha)) throw new Error('Untrusted PR');
             if (context.eventName !== 'workflow_dispatch' && context.payload.pull_request?.head.sha !== pr.head.sha) throw new Error('Stale PR event');
             core.setOutput('sha', pr.head.sha);
+            core.setOutput('pr', number);
       - uses: actions/checkout@v4
         with:
           ref: ${{ steps.trust.outputs.sha }}
@@ -139,6 +141,7 @@ jobs:
       statuses: write
     env:
       EXPECTED_SHA: ${{ needs.prepare.outputs.sha }}
+      EXPECTED_PR: ${{ needs.prepare.outputs.pr }}
     steps:
       - name: Publish success-only signal after rechecking the trusted head
         uses: actions/github-script@v7
@@ -147,12 +150,14 @@ jobs:
             if (context.repo.owner !== 'Ololadestephen' || context.repo.repo !== 'Mosaic') throw new Error('Wrong repository');
             const sha = process.env.EXPECTED_SHA;
             if (!/^[a-f0-9]{40}$/.test(sha ?? '')) throw new Error('Missing prepared commit');
-            const { data: pr } = await github.rest.pulls.get({ ...context.repo, pull_number: 1 });
-            if (pr.state !== 'open' || pr.base.ref !== 'main' || pr.base.repo.full_name !== 'Ololadestephen/Mosaic' || pr.head.repo?.full_name !== 'Ololadestephen/Mosaic' || pr.head.ref !== 'codex/hosted-preview-security-tests' || pr.head.sha !== sha) throw new Error('Prepared PR head is no longer trusted/current');
-            if (context.eventName === 'pull_request' && (context.payload.pull_request?.number !== 1 || context.payload.pull_request?.head.sha !== sha)) throw new Error('Stale PR event');
-            if (context.eventName === 'workflow_dispatch' && (context.payload.inputs?.pr !== '1' || !['refs/heads/main', 'refs/heads/codex/hosted-preview-security-tests'].includes(context.ref))) throw new Error('Untrusted dispatch');
+            const number = process.env.EXPECTED_PR;
+            if (!/^[1-9][0-9]{0,5}$/.test(number ?? '')) throw new Error('Missing prepared PR');
+            const { data: pr } = await github.rest.pulls.get({ ...context.repo, pull_number: Number(number) });
+            if (pr.number !== Number(number) || pr.state !== 'open' || pr.base.ref !== 'main' || pr.base.repo.full_name !== 'Ololadestephen/Mosaic' || pr.head.repo?.full_name !== 'Ololadestephen/Mosaic' || pr.head.ref !== 'codex/hosted-preview-security-tests' || pr.head.sha !== sha) throw new Error('Prepared PR head is no longer trusted/current');
+            if (context.eventName === 'pull_request' && (String(context.payload.pull_request?.number) !== number || context.payload.pull_request?.head.sha !== sha)) throw new Error('Stale PR event');
+            if (context.eventName === 'workflow_dispatch' && (context.payload.inputs?.pr !== number || !['refs/heads/main', 'refs/heads/codex/hosted-preview-security-tests'].includes(context.ref))) throw new Error('Untrusted dispatch');
             if (!['pull_request', 'workflow_dispatch'].includes(context.eventName)) throw new Error('Unsupported event');
-            await github.rest.repos.createCommitStatus({ ...context.repo, sha, state: 'success', context: 'Mosaic native fixture ready', description: 'Trusted PR 1 fixture and exact native plans prepared', target_url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}` });
+            await github.rest.repos.createCommitStatus({ ...context.repo, sha, state: 'success', context: 'Mosaic native fixture ready', description: `Trusted PR ${number} fixture and exact native plans prepared`, target_url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}` });
 
   verify:
     name: Verify native App evidence
