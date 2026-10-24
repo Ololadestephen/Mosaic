@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      PRODUCTION_ORIGIN: https://mosaic-chi-one.vercel.app
+      PRODUCTION_ORIGIN: https://trymosaic.vercel.app
       SHA: ${{ github.sha }}
       TESTSPRITE_API_TESTS: ${{ vars.TESTSPRITE_API_TESTS }}
     steps:

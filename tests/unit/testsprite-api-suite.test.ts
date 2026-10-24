@@ -179,7 +179,7 @@ describe("TestSprite API suite runner", () => {
       "utf8",
     );
     expect(workflow).toContain("python3 scripts/testsprite/api-suite.py");
-    expect(workflow).toContain("https://mosaic-chi-one.vercel.app");
+    expect(workflow).toContain("https://trymosaic.vercel.app");
     for (const file of [
       "health_and_headers.py",
       "origin_guard.py",
@@ -187,7 +187,7 @@ describe("TestSprite API suite runner", () => {
       "sign_in_contract.py",
     ])
       expect(readFileSync(`tests/testsprite-api/${file}`, "utf8")).toContain(
-        'BASE_URL = "https://mosaic-chi-one.vercel.app"',
+        'BASE_URL = "https://trymosaic.vercel.app"',
       );
   });
 });

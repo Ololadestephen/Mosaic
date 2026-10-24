@@ -1,76 +1,110 @@
 # Mosaic
 
-Mosaic keeps team work aligned with changing information. Bring a text brief, review cited proposals, apply selected changes, verify persistence, and undo eligible changes while protecting later edits.
+**When a brief changes, Mosaic shows exactly which tasks it changes, cites the words that justify each change, and applies only what you approve.**
 
-This is an early application, hosted at [Mosaic](https://mosaic-chi-one.vercel.app). It has password-based accounts, isolated workspaces, owner/editor/viewer access, a task board, immutable source revisions, private source derivatives, proposal review, an execution journal and field-aware undo. A server-side Gemini Developer API adapter is implemented. Live Gemini analysis is restricted to individually approved judge accounts with synthetic data and enforced usage caps. Two real hosted generation → cited review → selected apply → refresh → durable receipt → conflict-aware undo lifecycles have passed. A later production walkthrough on a judge seat repeated analysis → cited review → apply one item → refresh → undo; it did not exercise a conflict, which is covered by the fixture and TestSprite suites. These are repeated observations of one scenario, not evidence of broad model reliability. Automated model tests use explicitly labelled fixtures and mocked HTTP; they do not establish live AI accuracy.
+[![Checks](https://github.com/Ololadestephen/Mosaic/actions/workflows/checks.yml/badge.svg)](https://github.com/Ololadestephen/Mosaic/actions/workflows/checks.yml)
+[![TestSprite PR preview](https://github.com/Ololadestephen/Mosaic/actions/workflows/testsprite-pr.yml/badge.svg)](https://github.com/Ololadestephen/Mosaic/actions/workflows/testsprite-pr.yml)
+[![TestSprite API](https://github.com/Ololadestephen/Mosaic/actions/workflows/testsprite-api.yml/badge.svg)](https://github.com/Ololadestephen/Mosaic/actions/workflows/testsprite-api.yml)
 
-## Judge access
+[Live app](https://trymosaic.vercel.app) · [How it works](#how-it-works) · [Testing](docs/testing.md) · [AI and limits](docs/ai.md) · [Operations](docs/operations.md)
 
-Registration is closed. Judges share one private lobby link: it shows numbered seats, and choosing an available seat signs them into that seat's own synthetic workspaces without a password. Claims are atomic, so two judges can never receive the same seat. The seat stays theirs: an HttpOnly seat cookie returns them to it after signing out, and nobody else can claim it. Operators can release an abandoned seat, revoke a seat, or close the lobby with `scripts/access-link.ts`. Entry, release, revocation and closing are serialized with transaction-scoped advisory locks, so a revoked or closed seat never keeps a session that was being created at the same moment. Releasing a seat ends its sessions and frees it, but keeps its workspaces and any analyses already used; it does not reset the seat for the next judge. Individual private access links work the same way for a single account. Links are delivered privately and are never published here. The token sits in the URL fragment, so it is kept out of request URLs; the page then exchanges it once, in an HTTPS request body, for an ordinary session and removes it from the address bar. Mosaic stores only a hash of the link, under a separate namespace from sessions, so a link cannot act as a session and a session cannot be exchanged as a link. A session started from a link ends no later than the link itself. Signing out ends that browser session; operators can revoke an account's link and all of its sessions with `scripts/access-link.ts revoke`. Attempts are rate limited per client IP, and the 256-bit token makes guessing impractical. Start with “Synthetic judge brief”, analyze its saved revision, inspect the exact source passages, and select which proposals to apply. Refresh to inspect persisted changes and use Activity to preview safe undo. Analysis has a small per-account allowance; failures count and are not retried automatically. Manual work and history remain available after the allowance is exhausted.
+![Mosaic landing page](docs/images/landing.png)
 
-Only use synthetic information. The analysis screen explains what is sent to Google before you request it. The model proposes; it cannot apply changes. Later edits can prevent undo, and the application shows those conflicts.
+## Why
 
-## Run locally
+Plans are written against a brief, a policy or an incident report. When that source is revised, someone has to work out which tasks it now contradicts, and that work is usually done from memory. Tasks quietly go stale, cancelled work gets marked done, and nobody can say why a date moved.
 
-Use Node.js 24 and npm. Install the pinned dependencies with `npm ci`. Then run these in separate terminals:
+Mosaic keeps every revision of a source, compares it with the one before, and proposes the task changes the new wording implies. Each proposal quotes the exact passage it relies on. Nothing changes until a person selects it, and every applied change can be undone without overwriting work done since.
+
+## How it works
+
+1. **Bring a source.** Paste a brief and keep adding revisions. Each revision is immutable, and a revision names the one it replaces.
+2. **Review the change.** Compare the two versions side by side and read the proposals: status, assignee and due-date updates, new tasks, and open questions. Each one links to the exact quoted passage.
+3. **Apply what you choose.** Selected proposals are applied together in one transaction, and a receipt records every field before and after.
+4. **Undo safely.** Undo restores only the fields nobody has edited since. Anything changed later is kept and reported as a conflict.
+
+![A proposal for a revised incident brief](docs/images/review.png)
+
+_From the bundled incident drill: the revised brief says "do not rebuild" the reporting server. Mosaic proposes the replacement task, asks whether to archive the cancelled one, and does not mark it done._
+
+## Features
+
+- **Cited proposals.** The server checks that every quotation exists in the selected revision and derives its exact offsets; an invented quote is rejected.
+- **Human approval.** The model can only propose. Deterministic server code validates and performs every write.
+- **Conflict-aware undo.** Field-level lineage means undo never overwrites a later edit.
+- **Source history.** Immutable revisions with side-by-side comparison, and evidence links from each task.
+- **Workspaces and roles.** Isolated workspaces with owner, editor and viewer access and private sources.
+- **Durable activity.** An execution journal with idempotent apply and undo that survive refreshes and retries.
+
+![Task board](docs/images/board.png)
+
+## Try it
+
+The hosted app is at **[trymosaic.vercel.app](https://trymosaic.vercel.app)**. Registration there is closed. Hackathon judges receive a private lobby link: picking a seat signs you into that seat's synthetic workspaces, including the incident drill shown above, with a small allowance of live analyses. [Operations](docs/operations.md#judge-access) explains how access works.
+
+To run it yourself, see [Getting started](#getting-started).
+
+## Tech stack
+
+| Layer     | Choice                                                                                                   |
+| --------- | -------------------------------------------------------------------------------------------------------- |
+| App       | Next.js 16 (App Router), React 19, TypeScript                                                            |
+| Data      | PostgreSQL ([Neon](https://neon.tech) in production), checksummed SQL migrations, `postgres.js`          |
+| AI        | Google Gemini (`gemini-3.5-flash-lite`), server-side only, behind strict validation                      |
+| Contracts | `zod` schemas at every boundary                                                                          |
+| UI        | Hand-written CSS, `lucide-react` icons, `motion`, adapted [React Bits](https://reactbits.dev) components |
+| Testing   | Vitest, Playwright, real PostgreSQL, [TestSprite](https://www.testsprite.com) (UI, API and GitHub App)   |
+| Hosting   | Vercel; deploys only `main` and one provisioned preview branch                                           |
+
+## Getting started
+
+You need Node.js 24 and npm.
 
 ```sh
-npm run local:db
-npm run dev
+npm ci
+npm run local:db   # starts a local PostgreSQL, applies migrations; keep it running
+npm run dev        # in a second terminal
 ```
 
-Open [Mosaic locally](http://localhost:3000). Create your own account and workspace. Collaborators create separate accounts; the owner can add their registered email as an editor or viewer. No invitations or other messages are sent. The source form includes an explicitly fictional sample brief.
+Open http://localhost:3000, create an account and a workspace, and use **Bring a source** to try the bundled fictional brief. Collaborators register their own accounts; an owner can then add them by email as editors or viewers.
 
-The local database command starts actual PostgreSQL on loopback, applies checksummed SQL migrations and creates distinct development and test databases. It saves randomly generated credentials in ignored local files. Keep that terminal open. Existing local environment configuration is preserved. For an independently configured PostgreSQL database, set `DATABASE_URL` and run `npm run db:migrate`.
+Copy variable names from `.env.example` and put values only in local env files or hosting secrets. Live analysis is off unless you configure a provider; see [AI and limits](docs/ai.md).
 
-## Configuration
-
-Copy names from `.env.example`; configure values only in local environment files or server secrets. `APP_ORIGIN` must match the browser origin exactly. Sessions are HttpOnly, SameSite cookies; production cookies require HTTPS. Passwords use salted scrypt hashes. Email ownership verification, password recovery and managed hosted auth are not implemented.
-
-For authorized free-tier validation, use `AI_PROVIDER=gemini`, the server-only `GEMINI_API_KEY`, and `GEMINI_MODEL=gemini-3.5-flash-lite`. Confirm that the key's Google AI Studio project is Free tier with no billing attached before setting `GEMINI_FREE_TIER_CONFIRMED=true` and `AI_ENABLED=true`. A key alone does not establish free-tier eligibility. Assign one UUID as `GEMINI_VALIDATION_ID` for the authorized validation; preserve it across restarts. Do not rotate it to bypass the cap. `GEMINI_VALIDATION_CALL_LIMIT` defaults to ten cumulative requests shared across accounts and workspaces, with a supported maximum of one hundred. The earlier ceiling of thirteen protected the original diagnostic validation ID, whose thirteen attempts remain used up and separately recorded; raising the ceiling does not restore them, and the ID must not be rotated back. On 24 October 2026 the operator approved the current production values: ten attempts per account and sixty in total for both the hosted and validation caps. Both caps count every hosted Gemini attempt under the current validation ID, including failures, and the counts persist across restarts. Raise it only under an explicitly authorized additional allowance, preserving the same validation ID and all attempt history. Failed calls retain their slot; completed proposals are reused. Per-account daily and frequency limits also apply. Production additionally requires an explicit `AI_ALLOWED_ACCOUNT_IDS` allowlist. `GEMINI_HOSTED_ATTEMPT_LIMIT` defaults to zero and controls the separately approved hosted release allowance; `AI_ACCOUNT_TOTAL_CALL_LIMIT` caps each eligible account's lifetime attempts (at most ten). The hosted cap's supported maximum is one hundred, well below the free tier's 500 requests per day for this model. Hosted counts include failures and persist across restarts and validation-ID changes. Requests are reserved atomically in PostgreSQL and only one Gemini request can run at a time. The diagnostic allowance and its history are separate and must never be reset to enable release traffic. Set `AI_ENABLED=false` and redeploy to turn off new analysis; already-running requests remain bounded and counted. All three USD settings must remain zero for Gemini validation. There are no automatic retries, repairs or provider fallbacks. A legacy OpenRouter adapter remains explicitly selectable, but is never selected after a Gemini error.
-
-Analysis sends the selected source, its explicit predecessor, visible tasks and workspace member IDs/names to the configured provider. Gemini free-tier content and responses may be used for product improvement and human review under [Google's unpaid-service terms](https://ai.google.dev/gemini-api/terms#unpaid-services). Use synthetic content for validation. Source text is untrusted data. Server code validates IDs, dates, fields, human-edit attribution, exact quotations and record revisions. A valid citation confirms a passage exists; it does not establish interpretation accuracy. Blocked, incomplete and invalid responses cannot create drafts. Only a separate authorized application command writes task changes.
-
-`GEMINI_MAX_OUTPUT_TOKENS` configures Gemini's combined answer/thinking ceiling (default 4,096; application range 1,024–65,536). The adapter uses `thinkingLevel: MINIMAL`, which does not guarantee zero thinking, and requests at most two complete proposals. This budget does not guarantee completion. Token-limited responses are rejected even if their JSON appears complete; no repair or regeneration call follows. The adapter requests `responseMimeType: application/json` without a provider response schema. The prompt defines the JSON structure, while strict application and citation validation remain mandatory. JSON mode does not establish domain or citation validity. Gemini returns citations as `sourceVersionId`, an exact `quote`, and optionally a supplied `passageId`; offset fields are rejected. The server searches only the authorized selected immutable revision, rejects absent or ambiguous matches, derives UTF-16 offsets and runs the existing strict citation validator. Exact quotation proves presence, not interpretation: human review remains required. An additive migration stores bounded raw Gemini response bodies separately on the protected analysis run for audit; raw responses are excluded from application API views and logs.
-
-## Verify
+## Testing
 
 ```sh
-npm run format:check
-npm run lint
-npm run typecheck
-npm test
-npm run test:e2e
-npm run build
-npm run check:package
+npm run format:check && npm run lint && npm run typecheck
+npm test              # unit + integration (start npm run local:db first)
+npm run test:e2e      # browser tests on a separate local server and test database
+npm run build && npm run check:package
 ```
 
-Start the local database before integration or browser tests. Browser tests use installed Chrome, a separate local server on port 3100 (override with `MOSAIC_E2E_PORT` if occupied), a dedicated database ending in `_test`, separate signed-in contexts and labelled deterministic AI fixtures. They never call live AI or reset production data. Unit tests mock provider HTTP to exercise failures; PostgreSQL tests exercise real locking, rollback, permissions, idempotency, the shared Gemini cap, safe diagnostics and field lineage. Fixtures do not prove live model accuracy. Browser navigation waits for the destination URL and heading before using shared creation controls; a delayed-navigation regression checks that the source dialog opens on the intended page.
+| Layer                                   | What it covers                                                                                         | Where it runs                       |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------- |
+| Unit                                    | Contracts, citation and proposal validation, prompts, provider failure handling (mocked HTTP)          | Every PR                            |
+| Integration                             | Real PostgreSQL: locking, permissions, idempotency, rollback, the production runtime role's privileges | Every PR                            |
+| Browser                                 | Full lifecycle with labelled fixtures: review → apply → refresh → undo with a conflict                 | Every PR                            |
+| TestSprite strict suite (required)      | Four pinned scripts against the exact PR preview, including the stateful apply/undo fixture            | Every PR, blocks merge              |
+| TestSprite GitHub App (`TestSprite V3`) | 14 read-only checks of the public pages and access boundaries                                          | Every PR preview deployment         |
+| TestSprite API                          | Health and headers, origin guard, signed-out rejection, sign-in validation and rate limits             | Production, every merge and nightly |
 
-Explicit source revisions can be compared side by side, with related proposal and review-flag links; the columns stack on mobile. Citation links focus the exact immutable passage. A comparison never authorizes task changes.
+`main` is protected: the four required checks must pass and admins cannot bypass them. The [testing guide](docs/testing.md) explains how each suite proves it ran the reviewed code against the right commit.
 
-After an unconfirmed apply, use “Check original operation” or retry the original selection. Its key, revision and selection survive refresh in the same browser tab. Closing the tab can discard browser recovery state; committed activity remains in the database. Applying requires available browser session storage so the original operation can be recovered safely.
+## Project layout
 
-The core mutable task fields are status, assignee and date. Completed tasks are preserved during AI reconciliation. The model is told to propose Done only for work the source says was finished; a cancelled or replaced task keeps its status, its replacement is proposed as a new task, and archiving the old one becomes a question. The server drops any “stays as it is” entry that names a task the same proposal changes or creates. Apply is atomic for the selected items and closes the proposal; unselected items remain unapplied. Undo may partially restore eligible fields and explicitly reports conflicts. Untouched creations archive rather than disappear; decision records remain. Dates are calendar dates. Citation offsets use zero-based UTF-16 code units in normalized LF text, with an exclusive end offset.
+```
+src/app/            routes and pages
+src/components/     UI, including adapted React Bits components in components/bits
+src/domain/         pure contracts and validation (no I/O)
+src/server/         database, auth, reconciliation, AI providers
+migrations/         SQL migrations with checksums
+tests/              unit, integration, e2e and TestSprite API tests
+scripts/            local database, access links, publication checks, TestSprite tooling
+```
 
-Use `npm run db:backup` for a consistent logical backup under the ignored local backup directory. Backups contain private account/workspace data and exclude sessions. Restore is tested against a fresh, empty PostgreSQL database with matching migration hashes; the included restore function refuses existing data and requires a target name ending in `_restore_test`. Hosted backups and recovery checkpoints are operator-managed; scheduled backups are not provided.
+## Limitations
 
-`/api/health` reports database/migration readiness and the build commit without returning workspace data. Source packages and standalone builds are checked for internal documents, local data, secrets files and generated evidence. Keep the supplied ignore rules. Hosting uses Vercel and pooled Neon PostgreSQL with a restricted runtime role and certificate-verified TLS. Judge access is restricted as described above. The TestSprite GitHub App is installed for this repository, and saved scripts use isolated synthetic preview data. A required GitHub Actions workflow replays four AI-independent scripts against the exact PR preview commit: authentication and origin boundaries, manual task and immutable-revision persistence, a historical-revision analyze guard, and a stateful cited review/apply/conflict-aware undo fixture. The guard failed on the pre-fix PR commit and passed after the fix; the authentication case also caught an unkeyed source-creation regression introduced during hardening, which is fixed and covered by an integration test. Branch protection on `main` requires the `TestSprite PR preview` check. Before running, the workflow fetches each saved script and stops unless its TestSprite code version and SHA-256 match the reviewed pins in `scripts/testsprite/strict-pins.json`; afterwards it re-reads the scripts and fails unless they are unchanged and every case is a passing replay of its saved script. TestSprite does not report which script version a replay executed, so this before/after check is the evidence. The uploaded summary records the commit, preview origin, run IDs and pinned versions. The fixture is seeded into the isolated preview database with fresh deterministic IDs for each workflow attempt, so it never resets or shares mutable state with another run; there is no public fixture endpoint. TestSprite executions are not live AI evidence.
-
-TestSprite also tests the production API. The four backend tests in `tests/testsprite-api/` check readiness and security headers, signed-out rejection before routing, the origin guard on every state-changing request, and sign-in validation, closed registration and rate limiting. They send no credentials and create no accounts. After each merge to `main`, and nightly, a workflow waits until production serves that commit, makes the stored TestSprite code match the reviewed files (TestSprite adds only its fixed public-auth preamble), runs the tests, and fails unless every run is a fresh pass and the stored code and production commit are unchanged afterwards.
-
-Every PR preview also gets the TestSprite GitHub App status `TestSprite V3`: a portal trigger on the Vercel deployment runs six read-only checks of the public pages (landing, sign-in, signed-out redirect, lobby and access-link refusal) from `scripts/testsprite/pr-smoke-plans.jsonl`. They need no sign-in or fixture and write nothing, so they are a smoke test, not lifecycle evidence. The TestSprite GitHub App also ran three native UI tests automatically on PR commit `b7b6b7c` and reported all three passed; see [the App report](https://github.com/Ololadestephen/Mosaic/pull/1#issuecomment-6376524604). Treat that as a narrower smoke test: the executed steps cover sign-in and sign-out denial, task and two-version source creation, and review → apply → edit → undo with final-state checks. Its step logs omit the planned page refreshes, the commit check and several intermediate assertions, so the evidence workflow below rejects it as full coverage, and it is not required for merging. The strict suite above carries those assertions. A read-only database check of that run confirmed the selected changes, receipts, safe undo, the preserved conflict and the untouched unselected status. This source defines three expanded native test plans and a disabled-by-default preparation/evidence workflow for open PRs from the provisioned trusted branch, which share that branch's isolated preview and database. It verifies fresh native run identities, necessary exported assertions and durable database outcomes; it does not launch CLI test executions or create an App status. Use the current PR checks and provider report to establish which cases actually passed at each commit. A workflow definition alone is not validation. PRs from other branches or forks need isolated preview provisioning and an approved trust policy before receiving hosted secrets.
-
-The expanded local browser checks use a labelled deterministic proposal and exact excerpts attributed to the public TestSprite Season 4 page. Fictional revision-test text is explicitly marked synthetic. These checks validate the application lifecycle, not AI interpretation. CI-only fixture and provider-evidence tools are excluded from runtime deployment inputs and the runtime source package.
-
-## Publication and deployment checks
-
-Run `npm run check:publication` before staging or publishing. It inspects tracked, staged and candidate paths, rejects symlinks and private material, and checks for configured secret values without printing them. Run `npm run build` and `npm run check:package` to inspect the standalone output too. These checks do not publish anything.
-
-The prepared GitHub workflow runs static/unit checks, real disposable PostgreSQL tests and labelled browser fixtures, with no provider keys or repository secrets. It uploads no private test reports. These are deterministic checks, not live AI evidence. Fork PRs must never receive hosted database, deployment or TestSprite credentials; do not use privileged `pull_request_target` execution for their code.
-
-`vercel.json` permits deployments from `main` and the explicitly provisioned `codex/hosted-preview-security-tests` branch only. A trusted preview branch must be provisioned with its own database and branch-specific secrets before enabling its deployments. Configure `ALLOW_REGISTRATION=false` in protected hosting settings; production registration is operator-controlled, and previews enforce closed registration. Apply migrations with a separate migrator and provision restricted synthetic accounts. Vercel previews derive their origin from `VERCEL_URL` when `APP_ORIGIN` is unset and reject live AI credentials. Provision each preview from a separate synthetic-only project, never production records. Credentials belong in the hosting secret store; the Gemini key is production-only and protected; previews and CI have no provider key and cannot perform live analysis.
-
-The Dockerfile offers a standalone non-root runtime and a separate `migrate` target. Inject `DATABASE_URL` at runtime; supply the exact HTTPS `APP_ORIGIN`. For traceable builds pass `--build-arg MOSAIC_BUILD_COMMIT=<full-sha>`. Container builds and hosted operation require target-platform validation.
-
-`MOSAIC_PREVIEW_URL=https://<preview-host> MOSAIC_EXPECTED_COMMIT=<full-pr-head-sha> npm run test:hosted` runs only the prepared AI-independent smoke checks. It verifies the deployed commit before assertions, follows no HTTP redirects, and uses no account credentials or Gemini calls. It does not prove the complete signed-in lifecycle. The required TestSprite PR workflow targets the exact deployed revision and asserts its full commit SHA before login and after the saved-script assertions. Live Gemini validation remains manual and separately authorized.
+- Live AI quality has been checked on a few real runs of one scenario; that is not evidence of broad model reliability. Fixtures and mocks test the application, not the model.
+- Sources are plain text. There is no email verification, password recovery or invitation email.
+- Tasks have three editable fields (status, assignee and due date) and no "cancelled" state; a cancelled task becomes an archive question.
+- Hosted analysis is deliberately capped per account and per day.

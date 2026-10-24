@@ -3,7 +3,7 @@ import uuid
 
 import requests
 
-BASE_URL = "https://mosaic-chi-one.vercel.app"
+BASE_URL = "https://trymosaic.vercel.app"
 FOREIGN = "https://attacker.example"
 
 

@@ -3,7 +3,7 @@ import uuid
 
 import requests
 
-BASE_URL = "https://mosaic-chi-one.vercel.app"
+BASE_URL = "https://trymosaic.vercel.app"
 
 
 def expect_error(res: requests.Response, status: int, code: str) -> dict:
