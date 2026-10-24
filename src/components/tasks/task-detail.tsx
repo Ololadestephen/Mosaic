@@ -78,7 +78,7 @@ export function TaskDetailPanel({
       {task ? (
         <>
           <p className="eyebrow">
-            Stable task · {task.id.slice(0, 8)} · Revision {task.revision}
+            Revision {task.revision}
             {task.restrictedTo && " · Private"}
           </p>
           <form onSubmit={submit} key={task.revision}>
@@ -95,7 +95,7 @@ export function TaskDetailPanel({
             )}
           </form>
           <section className="detail-section">
-            <h3>Why does this task exist?</h3>
+            <h3>Source</h3>
             {task.evidence.length ? (
               task.evidence.map((evidence, index) => (
                 <blockquote key={index}>
@@ -123,14 +123,11 @@ export function TaskDetailPanel({
                 </blockquote>
               ))
             ) : (
-              <p className="muted">
-                Created manually by a workspace member. No source evidence has
-                been attached.
-              </p>
+              <p className="muted">Added manually. No source evidence.</p>
             )}
           </section>
           <section className="detail-section">
-            <h3>A history that stays</h3>
+            <h3>History</h3>
             {task.history.map((event, index) => (
               <div className="history-row" key={index}>
                 <b>{event.actorName}</b>

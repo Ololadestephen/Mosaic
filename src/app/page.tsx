@@ -22,16 +22,11 @@ export default function Home() {
         </Link>
       </header>
       <section className="hero">
-        <p className="eyebrow">A little clarity. A better way forward.</p>
         <h1>
           Information changes.
           <br />
           <em>Keep work in sync.</em>
         </h1>
-        <p className="hero-description">
-          Turn a changing brief into a considered next step. See what needs to
-          change, know why, and keep the work that still matters.
-        </p>
         <Link
           className="button primary"
           href={canRegister ? "/login?mode=register" : "/login"}
@@ -39,11 +34,6 @@ export default function Home() {
           {canRegister ? "Create your workspace" : "Sign in to your workspace"}{" "}
           <span aria-hidden="true">↗</span>
         </Link>
-        <p className="quiet">
-          {canRegister
-            ? "Your sources. Your review. Your call."
-            : "Access is limited to approved workspaces."}
-        </p>
         <div className="lifecycle" aria-label="Mosaic workflow">
           <span>
             <b>01</b> Bring a source
@@ -59,10 +49,6 @@ export default function Home() {
           </span>
         </div>
       </section>
-      <footer className="entry-footer">
-        <p>Work, with a reason.</p>
-        <p>A workspace that remembers why.</p>
-      </footer>
     </main>
   );
 }

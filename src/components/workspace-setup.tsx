@@ -13,13 +13,7 @@ export function WorkspaceForm({
   const [busy, setBusy] = useState(false);
   return (
     <section className="onboarding">
-      <p className="eyebrow">Your first workspace</p>
       <h1>Give the work a home.</h1>
-      <p>
-        One shared place for your sources, tasks, and decisions.
-        <br />
-        You choose who can see and change them.
-      </p>
       <form
         onSubmit={async (event) => {
           event.preventDefault();
@@ -45,12 +39,7 @@ export function WorkspaceForm({
       >
         <label>
           Workspace name
-          <input
-            name="name"
-            placeholder="e.g. Field Notes launch"
-            maxLength={100}
-            required
-          />
+          <input name="name" maxLength={100} required />
         </label>
         {error && (
           <p className="error" role="alert">
@@ -80,11 +69,6 @@ export function Members({
   const [busy, setBusy] = useState(false);
   return (
     <div className="settings-panel">
-      <h2>The people behind the work</h2>
-      <p className="muted">
-        Owners and editors can change work. Viewers can read shared work.
-        Private sources and their derivatives stay with their owner.
-      </p>
       <div className="member-list">
         {data.members.map((member) => (
           <div className="member-row" key={member.id}>
@@ -127,10 +111,6 @@ export function Members({
           }}
         >
           <h3>Add or update a collaborator</h3>
-          <p className="muted">
-            They create their own account first. Adding them here sends no
-            message.
-          </p>
           <label>
             Registered email
             <input name="email" type="email" required />
@@ -138,8 +118,8 @@ export function Members({
           <label>
             Role
             <select name="role">
-              <option value="editor">Editor · can change work</option>
-              <option value="viewer">Viewer · read access</option>
+              <option value="editor">Editor</option>
+              <option value="viewer">Viewer</option>
             </select>
           </label>
           {error && (
@@ -158,10 +138,6 @@ export function Members({
           {data.aiEnabled
             ? `Live ${data.aiProvider} analysis is configured. Only the selected source and authorized workspace context are sent to ${data.aiProvider}.`
             : `Live ${data.aiProvider} analysis is unavailable. Sources and tasks remain saved. No fixture fallback is used.`}
-        </p>
-        <p className="muted">
-          Source text and history remain in PostgreSQL. Self-service deletion
-          and hosted account recovery are not available in this local slice.
         </p>
       </div>
     </div>

@@ -91,9 +91,7 @@ test("App check: manual task and immutable source revision persist", async ({
   ).toHaveValue("in_progress");
   await expect(createdTask.getByLabel("Due date")).toHaveValue("2026-11-05");
   await expect(
-    createdTask.getByText(
-      "Created manually by a workspace member. No source evidence has been attached.",
-    ),
+    createdTask.getByText("Added manually. No source evidence."),
   ).toBeVisible();
   await expect(createdTask.getByText("created this task")).toBeVisible();
   await page.reload();

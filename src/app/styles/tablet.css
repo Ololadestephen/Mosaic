@@ -21,9 +21,6 @@
     margin: 0;
     max-width: 190px;
   }
-  .workspace-picker .eyebrow {
-    display: none;
-  }
   .workspace-picker select {
     font-size: 10px;
   }
@@ -46,7 +43,6 @@
     font-size: 15px;
     width: 15px;
   }
-  .sidebar-note,
   .account {
     display: none;
   }
@@ -56,9 +52,6 @@
   .topbar {
     height: 48px;
     padding: 0 22px;
-  }
-  .topbar-note {
-    font-size: 9px;
   }
   .workspace-main {
     padding: 30px 22px 50px;
@@ -72,9 +65,6 @@
   .page-heading h1 {
     font-size: 31px;
   }
-  .page-heading .muted {
-    font-size: 11px;
-  }
   .page-heading button {
     min-height: 40px;
   }
@@ -87,17 +77,8 @@
   .task-card h3 {
     font-size: 12px;
   }
-  .task-overline {
-    font-size: 7px;
-  }
   .task-meta {
     font-size: 8px;
-  }
-  .workspace-footer {
-    padding: 18px 22px;
-  }
-  .workspace-footer > span:last-child {
-    display: none;
   }
   .hero {
     padding-top: 70px;

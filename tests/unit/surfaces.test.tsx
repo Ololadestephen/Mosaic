@@ -107,14 +107,14 @@ describe("rendered surfaces", () => {
     ).toContain("Details");
     expect(
       renderToStaticMarkup(createElement(ChangeList, { drafts: [] })),
-    ).toContain("A considered next step.");
+    ).toContain("No proposals yet");
     expect(
       renderToStaticMarkup(
         createElement(SourceLibrary, {
           sources: [] as unknown as WorkspaceData["sources"],
         }),
       ),
-    ).toContain("Start with the source.");
+    ).toContain("No sources yet");
     expect(
       renderToStaticMarkup(
         createElement(Activity, {

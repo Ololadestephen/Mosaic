@@ -61,7 +61,7 @@ test("first-use source and task workflow persists at desktop and 360px", async (
     .getByRole("link", { name: "Confirm the fictional supplier", exact: true })
     .click();
   await expect(
-    page.getByRole("heading", { name: "Why does this task exist?" }),
+    page.getByRole("heading", { name: "Source", exact: true }),
   ).toBeVisible();
   await page
     .getByRole("combobox", { name: "Status", exact: true })
@@ -180,7 +180,7 @@ test("source, proposal and task loading failures have a working retry", async ({
   for (const [kind, id, label, ready] of [
     ["sources", seed.sourceId, "Retry source", "Immutable source · Version 1"],
     ["changes", seed.changeSetId, "Retry proposal", "Consider the change."],
-    ["tasks", seed.taskId, "Retry task", "Why does this task exist?"],
+    ["tasks", seed.taskId, "Retry task", "History"],
   ]) {
     let recovering = false;
     const pattern = `**/api/workspaces/${seed.workspaceId}/${kind}/${id}`;
@@ -258,6 +258,6 @@ test("a failed workspace switch never renders the previous workspace's work", as
   recovering = true;
   await page.getByRole("button", { name: "Retry", exact: true }).click();
   await expect(
-    page.getByText("Good work begins with a little context.", { exact: true }),
+    page.getByRole("heading", { name: "No tasks yet", exact: true }),
   ).toBeVisible();
 });

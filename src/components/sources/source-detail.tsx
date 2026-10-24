@@ -152,11 +152,9 @@ export function SourceDetailView({
       </Link>
       <div className="section-heading">
         <div>
-          <p className="eyebrow">
-            {source.visibility === "private"
-              ? "Only you · private derivatives"
-              : "Workspace source"}
-          </p>
+          {source.visibility === "private" && (
+            <p className="eyebrow">Private</p>
+          )}
           <h2 className="page-title">{source.title}</h2>
         </div>
         {canEdit && (
@@ -306,11 +304,6 @@ export function SourceDetailView({
           onClose={() => setRevising(false)}
           wide
         >
-          <p className="muted">
-            This confirms the new text revises version{" "}
-            {source.versions[0].number}. Existing work stays unchanged until you
-            review and apply a proposal.
-          </p>
           <form onSubmit={revise}>
             <label>
               Revised source

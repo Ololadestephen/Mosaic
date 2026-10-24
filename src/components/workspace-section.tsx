@@ -42,28 +42,12 @@ export function WorkspaceSection({
   return (
     <>
       <div className="page-heading">
-        <div>
-          <p className="eyebrow">
-            {section === "" ? "The work ahead" : "Keep the context close"}
-          </p>
-          <h1>
-            {section === ""
-              ? "A clear view of what’s next."
-              : (workspacePages.find(([path]) => path === section)?.[1] ??
-                "Workspace")}
-          </h1>
-          <p className="muted">
-            {section === ""
-              ? "A place for considered progress. Every change has a reason."
-              : section === "sources"
-                ? "Original words. Explicit revisions. Nothing quietly overwritten."
-                : section === "changes"
-                  ? "Consider the proposal before changing the work."
-                  : section === "activity"
-                    ? "What changed, who changed it, and what can safely be restored."
-                    : "A shared workspace, with clear boundaries."}
-          </p>
-        </div>
+        <h1>
+          {section === ""
+            ? "A clear view of what’s next."
+            : (workspacePages.find(([path]) => path === section)?.[1] ??
+              "Workspace")}
+        </h1>
         {canEdit && ["", "sources"].includes(section) && (
           <button className="primary" onClick={() => setModal("source")}>
             <span aria-hidden="true">＋</span> Bring a source
@@ -73,10 +57,6 @@ export function WorkspaceSection({
       {section === "" && (
         <>
           <div className="board-toolbar">
-            <div className="view-label">
-              ▦ <b>Board</b>
-              <span>{workspace.tasks.length} tasks</span>
-            </div>
             <label className="search">
               <span className="sr-only">Find a task</span>
               <input
@@ -97,13 +77,7 @@ export function WorkspaceSection({
               <span className="document-icon" aria-hidden="true">
                 ↗
               </span>
-              <div>
-                <h2>Good work begins with a little context.</h2>
-                <p>
-                  Bring a brief to propose source-backed work, or add a task
-                  yourself.
-                </p>
-              </div>
+              <h2>No tasks yet</h2>
             </div>
           )}
           <TaskBoard
@@ -127,10 +101,6 @@ export function WorkspaceSection({
               ))}
             </section>
           )}
-          <p className="board-footnote">
-            ↗ Open any task to see its source and history. Completed work stays
-            preserved.
-          </p>
         </>
       )}
       {section === "sources" &&

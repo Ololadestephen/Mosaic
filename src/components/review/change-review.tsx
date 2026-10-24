@@ -24,19 +24,13 @@ export function ChangeList({
               {draft.state === "applied" ? "Applied" : "Needs your review"}
             </p>
             <h2>Source proposal · {draft.id.slice(0, 8)}</h2>
-            <p className="muted">Draft revision {draft.revision}</p>
           </div>
           <span>↗</span>
         </Link>
       ))}
       {!drafts.length && (
         <div className="empty-panel">
-          <h2>A considered next step.</h2>
-          <p>
-            Add a source and run live analysis to create a proposal.
-            <br />
-            Nothing changes on the board during review.
-          </p>
+          <h2>No proposals yet</h2>
           <Link href="/app/sources" className="button">
             Open sources ↗
           </Link>
@@ -79,25 +73,17 @@ export function ChangeReview({
         ← All proposals
       </Link>
       <div className="section-heading">
-        <div>
-          <p className="eyebrow">
-            Take Two ·{" "}
-            {draft.state === "applied" ? "Applied proposal" : "Human review"} ·
-            Revision {draft.revision}
-          </p>
-          <h2 className="page-title">Consider the change.</h2>
-        </div>
-        <span className="pill">{draft.items.length} proposed items</span>
+        <h2 className="page-title">Consider the change.</h2>
+        <span className="pill">
+          {draft.state === "applied"
+            ? "Applied proposal"
+            : `${draft.items.length} proposed items`}
+        </span>
       </div>
       <p className="eyebrow">
         {draft.analysis
           ? `Live ${draft.analysis.provider === "gemini" ? "Gemini" : "OpenRouter"} analysis · ${draft.analysis.model}`
           : "Deterministic test fixture · not live AI"}
-      </p>
-      <p className="notice">
-        Select the changes you authorize. Reviewing and editing this proposal
-        leave the board unchanged. Applying closes this proposal; unselected
-        items are left unapplied.
       </p>
       {cited && (
         <details className="source-on-review">
@@ -155,10 +141,6 @@ export function ChangeReview({
               <li key={index}>{question}</li>
             ))}
           </ul>
-          <p className="quiet">
-            These questions do not execute changes. Resolve ambiguity in a
-            source revision or with a confirmed human choice.
-          </p>
         </section>
       )}
       <ProposalGroups
@@ -305,13 +287,7 @@ function ReviewActions({
               : "Apply selected changes"}
         </button>
       </div>
-      {attempted && (
-        <small>
-          Operation {operationKey}. Selection is held for safe recovery. The
-          same key, revision and selection survive refresh. A confirmed rejected
-          request can be reviewed as a new selection.
-        </small>
-      )}
+      {attempted && <small>Operation {operationKey}</small>}
     </footer>
   );
 }

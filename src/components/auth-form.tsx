@@ -50,13 +50,7 @@ export function AuthForm({
         Mosaic
       </Link>
       <section className="auth-card">
-        <p className="eyebrow">A place for the work ahead</p>
         <h1>{register ? "Make room for clarity." : "Welcome back."}</h1>
-        <p className="muted">
-          {register
-            ? "Create an account, then a workspace of your own."
-            : "Pick up where your team left off."}
-        </p>
         <form onSubmit={submit}>
           {register && (
             <label>
@@ -84,7 +78,6 @@ export function AuthForm({
               autoComplete={register ? "new-password" : "current-password"}
               required
             />
-            <small>At least 12 characters.</small>
           </label>
           {error && (
             <p className="error" role="alert">
@@ -108,11 +101,6 @@ export function AuthForm({
               : "New here? Create an account"}
           </button>
         )}
-        <p className="disclosure">
-          Sources are stored in your workspace. Live AI, when enabled, sends the
-          selected source and visible task context to the configured AI
-          provider.
-        </p>
       </section>
     </main>
   );

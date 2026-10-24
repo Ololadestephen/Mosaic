@@ -68,11 +68,7 @@ export function Activity({
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Person, field, date or batch ID…"
         />
-        <small>
-          Most recent 200 batches. Immutable history remains in the database.
-        </small>
       </label>
       <div className="activity-list">
         {visibleBatches.map((batch) => (
@@ -131,11 +127,6 @@ export function Activity({
       </div>
       {target && (
         <Dialog title="Unwind, with care." onClose={() => setTarget(null)} wide>
-          <p className="muted">
-            Only fields with intact mutation lineage can restore. Later edits
-            stay protected. Untouched new tasks archive and retain their
-            history. Decision records remain.
-          </p>
           {error && (
             <p className="error" role="alert">
               {error}
@@ -179,10 +170,6 @@ export function Activity({
             preview &&
             !preview.alreadyUndone && (
               <>
-                <p className="quiet">
-                  This preview is advisory. Eligibility is checked again inside
-                  the undo transaction.
-                </p>
                 <button className="primary" disabled={busy} onClick={undo}>
                   {busy
                     ? "Restoring eligible fields…"

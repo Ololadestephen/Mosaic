@@ -118,10 +118,6 @@ export function EditValue({
           />
         )}
       </label>
-      <small>
-        Your choice will be attributed to you. The original citation remains as
-        context.
-      </small>
       {error && (
         <p className="error" role="alert">
           {error}

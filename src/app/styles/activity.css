@@ -6,15 +6,8 @@
   margin-bottom: 25px;
   font-size: 11px;
 }
-.settings-panel > h2 {
-  font-family: Georgia, serif;
-  font-size: 25px;
-}
-.settings-panel > .muted {
-  font-size: 12px;
-}
 .member-list {
-  margin: 30px 0;
+  margin: 0 0 30px;
 }
 .member-row {
   display: flex;
@@ -52,10 +45,6 @@
   border-radius: 7px;
 }
 .settings-panel form h3 {
-  margin: 0;
-}
-.settings-panel form .muted {
-  font-size: 11px;
   margin: 0;
 }
 .activity-list {
