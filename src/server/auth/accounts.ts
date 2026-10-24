@@ -114,11 +114,15 @@ export async function signInWithLink(
   const input = accessLinkInput.safeParse(raw);
   if (!input.success) throw refusedLink();
   const key = linkKey(input.data.token);
-  // The shared lock on the link row makes revocation wait for this exchange, or this exchange see the revocation.
+  const [owner] = await db()<{ user_id: string }[]>`
+    SELECT user_id FROM sessions WHERE token_hash = ${key} AND expires_at > now()`;
+  if (!owner) throw refusedLink();
+  // A shared per-account lock makes revocation wait for this exchange, or this exchange see the revocation.
   return db().begin(async (tx) => {
+    await accessLock(tx, owner.user_id, "shared");
     const [link] = await tx<(Account & { expires_at: Date })[]>`
       SELECT u.id, u.email, u.name, s.expires_at FROM sessions s JOIN users u ON u.id = s.user_id
-      WHERE s.token_hash = ${key} AND s.expires_at > now() FOR SHARE OF s`;
+      WHERE s.token_hash = ${key} AND s.expires_at > now()`;
     if (!link) throw refusedLink();
     return startSession(
       { id: link.id, email: link.email, name: link.name },
@@ -129,11 +133,29 @@ export async function signInWithLink(
 }
 
 // Ends all access for an account: its access links and every session, including sessions started from a link.
+// Transaction-scoped advisory locks serialize access changes without needing UPDATE on sessions, which the
+// production runtime role deliberately lacks.
+export async function advisoryLock(
+  tx: Transaction,
+  name: string,
+  mode: "shared" | "exclusive",
+) {
+  if (mode === "shared")
+    await tx`SELECT pg_advisory_xact_lock_shared(hashtextextended(${name}, 0))`;
+  else await tx`SELECT pg_advisory_xact_lock(hashtextextended(${name}, 0))`;
+}
+
+const accessLock = (
+  tx: Transaction,
+  userId: string,
+  mode: "shared" | "exclusive",
+) => advisoryLock(tx, `mosaic:access:${userId}`, mode);
+
 export async function revokeAccess(userId: string) {
   return db().begin(async (tx) => {
-    // Lock the account's links first; the delete then runs on a fresh snapshot that includes any session an
+    // Take the account lock first; the delete then runs on a fresh snapshot that includes any session an
     // in-flight exchange committed while this waited.
-    await tx`SELECT 1 FROM sessions WHERE user_id = ${userId} AND token_hash LIKE 'link:%' FOR UPDATE`;
+    await accessLock(tx, userId, "exclusive");
     const removed = await tx`DELETE FROM sessions WHERE user_id = ${userId}`;
     return removed.count;
   });

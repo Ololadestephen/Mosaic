@@ -3,7 +3,13 @@ import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { DomainError, requireCondition } from "@/domain/errors";
 import { db, type Transaction } from "../db/client";
-import { type Account, digest, rateLimit, startSession } from "./accounts";
+import {
+  type Account,
+  advisoryLock,
+  digest,
+  rateLimit,
+  startSession,
+} from "./accounts";
 
 // One shared lobby link lets judges pick a seat: a prepared account with its own workspaces and AI allowance.
 // Lobby, seat, claim and resume records live in the sessions table under their own key namespaces, so none of them can
@@ -16,6 +22,8 @@ const enterInput = z
 const listInput = z.object({ token }).strict();
 const lobbyKey = (value: string) => `lobby:${digest(value)}`;
 const resumeKey = (value: string) => `resume:${digest(value)}`;
+const LOBBY_LOCK = "mosaic:lobby";
+const seatLock = (seat: number) => `mosaic:seat:${seat}`;
 const refused = () =>
   new DomainError(
     "UNAUTHENTICATED",
@@ -59,8 +67,8 @@ export async function lobbySeats(
 }
 
 // A browser that already holds a seat always returns to it; otherwise it claims the requested seat atomically.
-// Shared locks on the lobby row and then the seat row make close, release and revoke wait for this entry (and
-// remove what it created), or make this entry see that the lobby or seat is gone.
+// Shared locks on the lobby and then the seat make close, release and revoke wait for this entry (and remove what
+// it created), or make this entry see that the lobby or seat is gone.
 export async function enterLobby(
   raw: unknown,
   client: string,
@@ -75,18 +83,24 @@ export async function enterLobby(
   await rateLimit(`lobby-client:${client}`);
   const data = parse(enterInput, raw);
   return db().begin(async (tx) => {
+    await advisoryLock(tx, LOBBY_LOCK, "shared");
     const [lobby] = await tx<{ expires_at: Date }[]>`
-      SELECT expires_at FROM sessions WHERE token_hash = ${lobbyKey(data.token)} AND expires_at > now() FOR SHARE`;
+      SELECT expires_at FROM sessions WHERE token_hash = ${lobbyKey(data.token)} AND expires_at > now()`;
     if (!lobby) throw refused();
-    const [held] =
+    const heldSeat = async () =>
       resume && token.safeParse(resume).success
         ? await tx<{ seat: number; user_id: string }[]>`
             SELECT substr(st.token_hash, 6)::int AS seat, st.user_id FROM sessions r
             JOIN sessions st ON st.user_id = r.user_id AND st.token_hash LIKE 'seat:%' AND st.expires_at > now()
             WHERE r.token_hash = ${resumeKey(resume)} AND r.expires_at > now()
-              AND EXISTS (SELECT 1 FROM sessions c WHERE c.token_hash = 'claim:' || substr(st.token_hash, 6))
-            FOR SHARE OF st`
+              AND EXISTS (SELECT 1 FROM sessions c WHERE c.token_hash = 'claim:' || substr(st.token_hash, 6))`
         : [];
+    let [held] = await heldSeat();
+    if (held) {
+      // Re-check under the seat lock: a release may have completed while this waited.
+      await advisoryLock(tx, seatLock(held.seat), "shared");
+      [held] = await heldSeat();
+    }
     let seat: number;
     let userId: string;
     let issued: string | undefined;
@@ -95,8 +109,9 @@ export async function enterLobby(
     } else {
       requireCondition(data.seat, "INVALID_INPUT", "Choose an available seat.");
       seat = data.seat;
+      await advisoryLock(tx, seatLock(seat), "shared");
       const [row] = await tx<{ user_id: string }[]>`
-        SELECT user_id FROM sessions WHERE token_hash = ${`seat:${seat}`} AND expires_at > now() FOR SHARE`;
+        SELECT user_id FROM sessions WHERE token_hash = ${`seat:${seat}`} AND expires_at > now()`;
       requireCondition(row, "INVALID_INPUT", "Choose an available seat.");
       userId = row.user_id;
       const [claim] = await tx`
@@ -155,9 +170,10 @@ export async function openLobby(
 // Each takes an exclusive lock first, then deletes in a separate statement so that the delete sees anything an
 // in-flight entry committed while the lock was awaited.
 async function lockSeat(tx: Transaction, seat: number) {
+  await advisoryLock(tx, seatLock(seat), "exclusive");
   const [row] = await tx<
     { user_id: string }[]
-  >`SELECT user_id FROM sessions WHERE token_hash = ${`seat:${seat}`} FOR UPDATE`;
+  >`SELECT user_id FROM sessions WHERE token_hash = ${`seat:${seat}`}`;
   requireCondition(row, "NOT_FOUND", `Seat ${seat} does not exist.`);
   return row.user_id;
 }
@@ -188,8 +204,7 @@ export async function revokeSeat(seat: number) {
 // Closes the lobby and ends every seat's access, including sessions already started from it.
 export async function closeLobby() {
   return db().begin(async (tx) => {
-    await tx`SELECT 1 FROM sessions WHERE token_hash LIKE 'lobby:%' FOR UPDATE`;
-    await tx`SELECT 1 FROM sessions WHERE token_hash LIKE 'seat:%' FOR UPDATE`;
+    await advisoryLock(tx, LOBBY_LOCK, "exclusive");
     const removed = await tx`
       DELETE FROM sessions WHERE token_hash LIKE 'lobby:%' OR token_hash LIKE 'claim:%'
         OR user_id IN (SELECT user_id FROM sessions WHERE token_hash LIKE 'seat:%')`;
