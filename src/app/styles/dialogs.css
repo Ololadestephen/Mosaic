@@ -24,7 +24,7 @@
   margin-bottom: 19px;
 }
 .dialog-header h2 {
-  font-family: Georgia, serif;
+  font-family: var(--font-display), Georgia, serif;
   font-size: 27px;
   font-weight: 400;
   margin: 0;
@@ -62,7 +62,7 @@
   padding-top: 27px;
 }
 .detail-section h3 {
-  font-family: Georgia, serif;
+  font-family: var(--font-display), Georgia, serif;
   font-size: 21px;
   font-weight: 400;
 }
@@ -76,7 +76,7 @@ blockquote {
   background: #f3f4ec;
 }
 blockquote p {
-  font-family: Georgia, serif;
+  font-family: var(--font-display), Georgia, serif;
   font-size: 16px !important;
   line-height: 1.8;
 }

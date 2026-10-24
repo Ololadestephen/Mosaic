@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { BatchResult, UndoPreview, WorkspaceData } from "@/client/types";
 import { Dialog } from "./dialog";
 import { previewUndo, undoBatch } from "@/client/commands";
+import { Arrow } from "./icons";
 
 export function Activity({
   workspaceId,
@@ -88,7 +89,7 @@ export function Activity({
                 className="why-link"
                 href={`/app/changes/${batch.changeSetId}`}
               >
-                Inspect source proposal ↗
+                Inspect source proposal <Arrow />
               </Link>
             )}
             <details>
@@ -113,7 +114,7 @@ export function Activity({
               batch.operation !== "undo" &&
               batch.changes.length > 0 && (
                 <button className="text-button" onClick={() => open(batch.id)}>
-                  Preview safe undo ↗
+                  Preview safe undo <Arrow />
                 </button>
               )}
           </article>

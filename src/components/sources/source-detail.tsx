@@ -8,6 +8,7 @@ import { addRevision, analyzeSource, loadSource } from "@/client/commands";
 import { Dialog } from "../dialog";
 import { SourcePassage } from "./source-passage";
 import { RevisionComparison } from "./revision-comparison";
+import { Arrow } from "../icons";
 export function SourceDetailView({
   workspaceId,
   sourceId,
@@ -189,7 +190,7 @@ export function SourceDetailView({
             {draft.state === "applied"
               ? "View applied changes"
               : "Review proposal"}{" "}
-            ↗
+            <Arrow />
           </Link>
         ) : (
           canEdit && (

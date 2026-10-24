@@ -30,7 +30,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-family: Arial, sans-serif;
+  font-family: var(--font-ui), Arial, sans-serif;
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.1px;
@@ -59,16 +59,13 @@
   flex-direction: column;
   gap: 13px;
 }
-.task-card {
-  border: 1px solid #e0e3d6;
-  background: var(--surface);
-  border-radius: 7px;
+.glow-card.task-card {
+  border-radius: 10px;
   padding: 17px 16px;
-  box-shadow: 0 2px 3px #424d2b03;
-  transition: border-color 0.15s;
+  transition: transform 0.2s ease;
 }
-.task-card:hover {
-  border-color: #a4b395;
+.glow-card.task-card:hover {
+  transform: translateY(-1px);
 }
 .task-card > .pill {
   display: inline-block;
@@ -117,7 +114,7 @@
   margin: 0 0 28px;
 }
 .board-welcome h2 {
-  font-family: Georgia, serif;
+  font-family: var(--font-display), Georgia, serif;
   font-size: 21px;
   font-weight: 400;
   margin: 0 0 6px;

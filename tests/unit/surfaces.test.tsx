@@ -15,6 +15,12 @@ import { EditValue } from "@/components/review/proposal-editor";
 import Home from "@/app/page";
 import RootLayout from "@/app/layout";
 
+// next/font only runs inside the Next.js compiler; the layout just needs the CSS variable class names.
+vi.mock("next/font/google", () => {
+  const font = () => ({ variable: "font-test" });
+  return { Inter: font, Instrument_Serif: font };
+});
+
 vi.mock("next/link", () => ({
   default: ({ children, href }: { children: ReactNode; href: string }) =>
     createElement("a", { href }, children),

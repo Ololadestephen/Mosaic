@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { Proposal } from "@/client/types";
 import { statusLabels } from "../tasks/task-board";
 import { EditValue } from "./proposal-editor";
+import { Arrow } from "../icons";
 
 function valueLabel(
   field: string,
@@ -214,7 +215,7 @@ function ProposalRow({
               <Link
                 href={`/app/sources/${version?.sourceId}?version=${citation.sourceVersionId}&start=${citation.start}&end=${citation.end}`}
               >
-                Exact source passage · v{version?.number} ↗
+                Exact source passage · v{version?.number} <Arrow />
               </Link>
             </cite>
           </blockquote>

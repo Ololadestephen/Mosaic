@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { GlowCard } from "../glow-card";
 import { useState } from "react";
 import type { WorkspaceData } from "@/client/types";
 import { sampleBrief, sampleTitle } from "@/domain/sources/sample";
 import { sourceInput } from "@/domain/contracts";
 import { createSource } from "@/client/commands";
 import { Dialog } from "../dialog";
+import { Arrow, DocumentIcon } from "../icons";
 
 export function SourceLibrary({
   sources,
@@ -16,30 +18,24 @@ export function SourceLibrary({
   return (
     <div className="source-list">
       {sources.map((source) => (
-        <Link
-          className="source-card"
-          href={`/app/sources/${source.id}`}
-          key={source.id}
-        >
-          <span className="document-icon" aria-hidden="true">
-            ▤
-          </span>
-          <div>
-            <h2>{source.title}</h2>
-            <p className="muted">
-              {source.versionCount}{" "}
-              {source.versionCount === 1 ? "revision" : "revisions"}
-              {source.visibility === "private" && " · Private"}
-            </p>
-          </div>
-          <span aria-hidden="true">↗</span>
-        </Link>
+        <GlowCard className="source-card-shell" key={source.id}>
+          <Link className="source-card" href={`/app/sources/${source.id}`}>
+            <DocumentIcon />
+            <div>
+              <h2>{source.title}</h2>
+              <p className="muted">
+                {source.versionCount}{" "}
+                {source.versionCount === 1 ? "revision" : "revisions"}
+                {source.visibility === "private" && " · Private"}
+              </p>
+            </div>
+            <Arrow />
+          </Link>
+        </GlowCard>
       ))}
       {!sources.length && (
         <div className="empty-panel">
-          <span className="document-icon" aria-hidden="true">
-            ▤
-          </span>
+          <DocumentIcon />
           <h2>No sources yet</h2>
         </div>
       )}
@@ -120,7 +116,7 @@ export function NewSource({
               setText(sampleBrief);
             }}
           >
-            Use fictional launch sample ↗
+            Use fictional launch sample <Arrow />
           </button>
           <label>
             Visibility

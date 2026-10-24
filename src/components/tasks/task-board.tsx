@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { GlowCard } from "../glow-card";
 import { createTaskInput, type Task } from "@/domain/contracts";
 import { PASSAGE_REVIEW_LABEL } from "@/domain/sources/passage-change";
 import type { WorkspaceData } from "@/client/types";
@@ -91,7 +92,7 @@ export function TaskBoard({
             {filtered
               .filter((task) => task.status === status)
               .map((task) => (
-                <article className="task-card" key={task.id}>
+                <GlowCard className="task-card" role="article" key={task.id}>
                   {task.restrictedTo && <span className="pill">Private</span>}
                   <h3>
                     <Link href={`/app/tasks/${task.id}`}>{task.title}</Link>
@@ -113,7 +114,7 @@ export function TaskBoard({
                       {dateLabel(task.dueDate)}
                     </time>
                   </div>
-                </article>
+                </GlowCard>
               ))}
           </div>
         </section>

@@ -24,24 +24,29 @@
   .workspace-picker select {
     font-size: 10px;
   }
-  .sidebar nav {
+  .sidebar .line-nav {
     grid-column: 1/-1;
-    flex-direction: row;
-    justify-content: space-between;
-    gap: 4px;
-    overflow: auto;
+    overflow-x: auto;
   }
-  .sidebar nav a {
-    font-size: 10px;
-    gap: 5px;
-    padding: 9px 8px;
-    border-radius: 4px 4px 0 0;
+  .sidebar .line-nav ul {
+    flex-direction: row;
+    padding: 0;
+    gap: 2px;
+  }
+  .sidebar .line-nav a {
+    font-size: 12px;
+    padding: 10px 10px 12px;
     min-height: 43px;
     white-space: nowrap;
+    transform: none;
+    border-bottom: 2px solid transparent;
   }
-  .sidebar nav a > span {
-    font-size: 15px;
-    width: 15px;
+  .sidebar .line-nav a[aria-current="page"] {
+    border-bottom-color: var(--accent);
+  }
+  .sidebar .line-nav__marker,
+  .sidebar .line-nav__index {
+    display: none;
   }
   .account {
     display: none;
@@ -79,18 +84,6 @@
   }
   .task-meta {
     font-size: 8px;
-  }
-  .hero {
-    padding-top: 70px;
-  }
-  .entry-page {
-    padding: 0 30px;
-  }
-  .lifecycle {
-    gap: 20px;
-  }
-  .lifecycle span {
-    font-size: 11px;
   }
   .source-paper {
     padding: 28px;

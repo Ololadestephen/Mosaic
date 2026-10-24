@@ -7,13 +7,14 @@ import { SourceLibrary } from "./sources/source-library";
 import { SourceDetailView } from "./sources/source-detail";
 import { TaskBoard } from "./tasks/task-board";
 import { Members } from "./workspace-setup";
+import { Arrow, Add } from "./icons";
 
 export const workspacePages = [
-  ["", "Board", "▦"],
-  ["sources", "Sources", "▤"],
-  ["changes", "Changes", "↔"],
-  ["activity", "Activity", "◷"],
-  ["settings", "Members", "⊙"],
+  ["", "Board"],
+  ["sources", "Sources"],
+  ["changes", "Changes"],
+  ["activity", "Activity"],
+  ["settings", "Members"],
 ] as const;
 
 export function WorkspaceSection({
@@ -50,7 +51,7 @@ export function WorkspaceSection({
         </h1>
         {canEdit && ["", "sources"].includes(section) && (
           <button className="primary" onClick={() => setModal("source")}>
-            <span aria-hidden="true">＋</span> Bring a source
+            <Add /> Bring a source
           </button>
         )}
       </div>
@@ -68,14 +69,14 @@ export function WorkspaceSection({
             </label>
             {canEdit && (
               <button className="text-button" onClick={() => setModal("task")}>
-                ＋ Add task
+                <Add /> Add task
               </button>
             )}
           </div>
           {!workspace.tasks.length && (
             <div className="board-welcome">
               <span className="document-icon" aria-hidden="true">
-                ↗
+                <Arrow />
               </span>
               <h2>No tasks yet</h2>
             </div>

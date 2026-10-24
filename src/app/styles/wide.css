@@ -8,8 +8,8 @@
   .board {
     gap: 30px;
   }
-  .task-card {
-    padding: 23px 22px 0;
+  .glow-card.task-card {
+    padding: 23px 22px;
   }
   .why-link {
     margin-left: -22px;
@@ -40,8 +40,8 @@
   .board {
     gap: 15px;
   }
-  .task-card {
-    padding: 14px 12px 0;
+  .glow-card.task-card {
+    padding: 14px 12px;
   }
   .why-link {
     margin-left: -12px;

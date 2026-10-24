@@ -3,24 +3,22 @@
   flex-direction: column;
   gap: 16px;
 }
+.glow-card.source-card-shell {
+  padding: 0;
+  border-radius: 12px;
+}
 .source-card {
-  border: 1px solid var(--line);
-  background: var(--surface);
   padding: 26px;
-  border-radius: 7px;
   display: flex;
   align-items: center;
   gap: 25px;
 }
-.source-card > span:last-child {
+.source-card > .icon:last-child {
   margin-left: auto;
   color: #8e9f7c;
 }
-.source-card:hover {
-  border-color: #acb69c;
-}
 .source-card h2 {
-  font-family: Georgia, serif;
+  font-family: var(--font-display), Georgia, serif;
   font-size: 22px;
   font-weight: 400;
   margin: 5px 0;
@@ -41,7 +39,7 @@
   color: var(--muted);
 }
 .empty-panel h2 {
-  font-family: Georgia, serif;
+  font-family: var(--font-display), Georgia, serif;
   color: var(--ink);
   font-size: 28px;
   margin: 20px 0 12px;
@@ -94,7 +92,7 @@
   box-shadow: 0 5px 18px #40452a04;
 }
 .source-paper pre {
-  font-family: Georgia, serif;
+  font-family: var(--font-display), Georgia, serif;
   font-size: 16px;
   line-height: 2;
   white-space: pre-wrap;
@@ -143,7 +141,7 @@ mark {
   margin: 24px 0;
 }
 .revision-comparison h3 {
-  font-family: Georgia, serif;
+  font-family: var(--font-display), Georgia, serif;
   font-size: 23px;
   font-weight: 400;
 }
