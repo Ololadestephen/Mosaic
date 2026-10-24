@@ -3,7 +3,7 @@ import re
 
 import requests
 
-BASE_URL = "https://mosaic-chi-one.vercel.app"
+BASE_URL = "https://trymosaic.vercel.app"
 
 
 def test_health_reports_ready_build_without_workspace_data() -> None:

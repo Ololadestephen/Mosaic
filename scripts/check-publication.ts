@@ -18,6 +18,7 @@ const allowedRoots = new Set([
   "public",
   ".github",
   "README.md",
+  "docs",
   "package.json",
   "package-lock.json",
   "next.config.ts",
