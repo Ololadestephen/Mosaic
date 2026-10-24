@@ -78,6 +78,21 @@ describe("private access links", () => {
     ).rejects.toMatchObject(refused);
   });
 
+  it("revocation racing an exchange never leaves a session behind", async () => {
+    for (let round = 0; round < 12; round++) {
+      const owner = await account();
+      const link = await issueAccessLink(owner.account.id, hours(48));
+      await Promise.allSettled([
+        signInWithLink({ token: link }, client()),
+        signInWithLink({ token: link }, client()),
+        revokeAccess(owner.account.id),
+      ]);
+      const [{ n }] = await db()<{ n: number }[]>`
+        SELECT count(*)::int AS n FROM sessions WHERE user_id = ${owner.account.id}`;
+      expect(n).toBe(0);
+    }
+  });
+
   it("gives expired, unknown and malformed links the same refusal", async () => {
     const owner = await account();
     const link = await issueAccessLink(owner.account.id, hours(48));
