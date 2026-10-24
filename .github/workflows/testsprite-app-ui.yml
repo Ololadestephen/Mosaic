@@ -157,7 +157,9 @@ jobs:
   verify:
     name: Verify native App evidence
     needs: [prepare, readiness]
-    if: always()
+    # Unarmed commits show as skipped, not failed. GitHub counts a skipped job as passing a
+    # required check, so this job must never be a required check; armed runs still fail closed.
+    if: always() && vars.MOSAIC_NATIVE_APP_EVENT_ARMED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:

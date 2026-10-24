@@ -563,7 +563,7 @@ describe("actual success-only fixture readiness signal", () => {
   });
 });
 
-describe("required native check fails closed without paid execution", () => {
+describe("optional native check fails closed without paid execution", () => {
   const verifyJob = workflow.split("  verify:\n")[1];
   const authorizationShell = verifyJob
     .split("        run: |\n")[1]
@@ -578,8 +578,9 @@ describe("required native check fails closed without paid execution", () => {
   ])(
     "armed=%s, preparation=%s, readiness=%s gives exit %s",
     (armed, preparation, readiness, status) => {
-      expect(verifyJob).toContain("if: always()");
-      expect(verifyJob.split("    runs-on:")[0]).not.toContain("vars.");
+      expect(verifyJob.split("    runs-on:")[0]).toContain(
+        "if: always() && vars.MOSAIC_NATIVE_APP_EVENT_ARMED == 'true'",
+      );
       const result = spawnSync(
         "bash",
         ["-euo", "pipefail", "-c", authorizationShell],
