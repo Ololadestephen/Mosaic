@@ -204,6 +204,27 @@ export function signInWithLink(token: string) {
   );
 }
 
+export function lobbySeats(token: string) {
+  return api(
+    "auth/lobby-seats",
+    z.object({
+      seats: z.array(z.object({ seat: z.number(), available: z.boolean() })),
+      yours: z.number().nullable(),
+    }),
+    "POST",
+    { token },
+  );
+}
+
+export function enterLobby(token: string, seat?: number) {
+  return api(
+    "auth/lobby",
+    z.object({ id: z.string(), seat: z.number() }).catchall(z.unknown()),
+    "POST",
+    seat ? { token, seat } : { token },
+  );
+}
+
 export function signOut() {
   return api("auth/logout", z.object({ ok: z.literal(true) }), "POST");
 }

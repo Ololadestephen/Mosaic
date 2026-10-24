@@ -11,7 +11,7 @@ export const digest = (value: string) =>
   createHash("sha256").update(value).digest("hex");
 export type Account = { id: string; email: string; name: string };
 
-async function rateLimit(key: string) {
+export async function rateLimit(key: string) {
   const [row] = await db()<{ attempts: number }[]>`
     INSERT INTO rate_limits (key) VALUES (${digest(key)})
     ON CONFLICT (key) DO UPDATE SET
@@ -70,7 +70,7 @@ export async function signIn(
   return startSession(account);
 }
 
-async function startSession(account: Account, notAfter?: Date) {
+export async function startSession(account: Account, notAfter?: Date) {
   const token = randomBytes(32).toString("base64url");
   await db()`INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (${digest(token)}, ${account.id}, LEAST(now() + interval '7 days', ${notAfter ?? null}::timestamptz))`;
   return { account, token };

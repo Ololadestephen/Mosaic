@@ -128,10 +128,10 @@ describe("Gemini boundary with mocked HTTP only", () => {
     }
     expect(fetch).not.toHaveBeenCalled();
   });
-  it("permits the authorized cumulative cap of thirteen, but no higher slots", () => {
-    vi.stubEnv("GEMINI_VALIDATION_CALL_LIMIT", "13");
+  it("permits the authorized cumulative cap of one hundred, but no higher slots", () => {
+    vi.stubEnv("GEMINI_VALIDATION_CALL_LIMIT", "100");
     expect(() => geminiRequest(context())).not.toThrow();
-    vi.stubEnv("GEMINI_VALIDATION_CALL_LIMIT", "14");
+    vi.stubEnv("GEMINI_VALIDATION_CALL_LIMIT", "101");
     expect(() => geminiRequest(context())).toThrow("configuration");
     expect(fetch).not.toHaveBeenCalled();
   });

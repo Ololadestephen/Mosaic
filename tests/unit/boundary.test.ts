@@ -22,13 +22,20 @@ describe("environment", () => {
     expect(env().APP_ORIGIN).toBe("http://localhost:3000");
   });
 
-  it("accepts the approved ten-attempt hosted ceiling and rejects eleven", () => {
-    vi.stubEnv("DATABASE_URL", "postgresql://local@localhost/mosaic_test");
-    vi.stubEnv("GEMINI_HOSTED_ATTEMPT_LIMIT", "10");
-    expect(env().GEMINI_HOSTED_ATTEMPT_LIMIT).toBe(10);
-    vi.stubEnv("GEMINI_HOSTED_ATTEMPT_LIMIT", "11");
-    expect(() => env()).toThrow(DomainError);
-  });
+  it.each([
+    ["GEMINI_HOSTED_ATTEMPT_LIMIT", 100],
+    ["GEMINI_VALIDATION_CALL_LIMIT", 100],
+    ["AI_ACCOUNT_TOTAL_CALL_LIMIT", 10],
+  ] as const)(
+    "accepts the approved %s ceiling of %i and rejects one more",
+    (name, ceiling) => {
+      vi.stubEnv("DATABASE_URL", "postgresql://local@localhost/mosaic_test");
+      vi.stubEnv(name, String(ceiling));
+      expect(env()[name]).toBe(ceiling);
+      vi.stubEnv(name, String(ceiling + 1));
+      expect(() => env()).toThrow(DomainError);
+    },
+  );
 });
 
 describe("request body", () => {
