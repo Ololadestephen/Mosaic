@@ -10,7 +10,6 @@ on:
         description: Open Mosaic PR from the trusted preview branch
         required: true
         type: string
-        type: string
 
 permissions:
   contents: read
