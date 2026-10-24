@@ -20,10 +20,6 @@
 .workspace-picker {
   margin-bottom: 29px;
 }
-.workspace-picker .eyebrow {
-  font-size: 9px;
-  margin: 0 9px 9px;
-}
 .workspace-picker select {
   background: #e5e8dd;
   border: 1px solid #dadecf;
@@ -63,22 +59,8 @@
   padding: 1px 5px;
   border-radius: 3px;
 }
-.sidebar-note {
-  margin-top: auto;
-  padding: 48px 11px 23px;
-  color: #838a7b;
-}
-.sidebar-note > span {
-  font-size: 23px;
-  color: #a9b29c;
-}
-.sidebar-note p {
-  font-family: Georgia, serif;
-  font-size: 17px;
-  line-height: 1.5;
-  margin: 12px 0 0;
-}
 .account {
+  margin-top: auto;
   display: flex;
   align-items: center;
   gap: 9px;
@@ -143,13 +125,6 @@
   font-size: 11px;
   color: #73796c;
 }
-.topbar-note {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: #828779;
-  font-size: 10px;
-}
 .status-dot {
   display: inline-block;
   width: 7px;
@@ -171,17 +146,10 @@
 }
 .page-heading h1 {
   font-size: 34px;
-  margin: 10px 0 12px;
+  margin: 0;
   letter-spacing: -1px;
-}
-.page-heading .muted {
-  font-size: 12px;
-  margin-bottom: 0;
 }
 .page-heading button {
   font-size: 11px;
   white-space: nowrap;
-}
-.page-heading .eyebrow {
-  font-size: 9px;
 }

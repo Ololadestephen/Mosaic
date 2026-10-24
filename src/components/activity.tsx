@@ -2,13 +2,9 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import type {
-  previewCompensation,
-  StoredBatch,
-  WorkspaceData,
-} from "@/client/types";
+import type { BatchResult, UndoPreview, WorkspaceData } from "@/client/types";
 import { Dialog } from "./dialog";
-import { previewUndo, undoBatch } from "./commands";
+import { previewUndo, undoBatch } from "@/client/commands";
 
 export function Activity({
   workspaceId,
@@ -22,10 +18,8 @@ export function Activity({
   onSaved: () => Promise<void>;
 }) {
   const [target, setTarget] = useState<string | null>(null);
-  const [preview, setPreview] = useState<Awaited<
-    ReturnType<typeof previewCompensation>
-  > | null>(null);
-  const [result, setResult] = useState<StoredBatch["result"] | null>(null);
+  const [preview, setPreview] = useState<UndoPreview | null>(null);
+  const [result, setResult] = useState<BatchResult | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [key, setKey] = useState(() => crypto.randomUUID());
@@ -50,15 +44,11 @@ export function Activity({
     }
   }
   async function undo() {
+    if (!target) return;
     setBusy(true);
     setError("");
     try {
-      setResult(
-        await undoBatch(workspaceId, {
-          batchId: target,
-          operationKey: key,
-        }),
-      );
+      setResult(await undoBatch(workspaceId, { batchId: target }, key));
       await onSaved();
     } catch (error) {
       setError(
@@ -78,11 +68,7 @@ export function Activity({
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Person, field, date or batch ID…"
         />
-        <small>
-          Most recent 200 batches. Immutable history remains in the database.
-        </small>
       </label>
       <div className="activity-list">
         {visibleBatches.map((batch) => (
@@ -141,11 +127,6 @@ export function Activity({
       </div>
       {target && (
         <Dialog title="Unwind, with care." onClose={() => setTarget(null)} wide>
-          <p className="muted">
-            Only fields with intact mutation lineage can restore. Later edits
-            stay protected. Untouched new tasks archive and retain their
-            history. Decision records remain.
-          </p>
           {error && (
             <p className="error" role="alert">
               {error}
@@ -189,10 +170,6 @@ export function Activity({
             preview &&
             !preview.alreadyUndone && (
               <>
-                <p className="quiet">
-                  This preview is advisory. Eligibility is checked again inside
-                  the undo transaction.
-                </p>
                 <button className="primary" disabled={busy} onClick={undo}>
                   {busy
                     ? "Restoring eligible fields…"

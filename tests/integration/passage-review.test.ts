@@ -73,12 +73,16 @@ async function propose(
       { items, questions: [], preserved: ["Unrelated work stays."] },
     ),
   );
-  return applyProposal(actor, workspaceId, {
-    changeSetId: draft.id,
-    expectedRevision: 1,
-    selectedKeys: items.map((item) => item.key),
-    operationKey: randomUUID(),
-  });
+  return applyProposal(
+    actor,
+    workspaceId,
+    {
+      changeSetId: draft.id,
+      expectedRevision: 1,
+      selectedKeys: items.map((item) => item.key),
+    },
+    randomUUID(),
+  );
 }
 
 describe("supporting passage review signal", () => {

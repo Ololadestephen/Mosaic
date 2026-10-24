@@ -30,7 +30,13 @@ try {
     "npm returned unreadable package metadata. No package has been approved.",
   );
 }
-for (const file of pack[0].files) assertPublicPath(file.path);
+for (const file of pack[0].files) {
+  assertPublicPath(file.path);
+  if (file.path.startsWith("scripts/testsprite/"))
+    throw new Error(
+      `CI-only fixture tool in runtime source package: ${file.path}`,
+    );
+}
 async function inspect(directory: string, prefix = "") {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const relative = join(prefix, entry.name);

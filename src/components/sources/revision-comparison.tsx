@@ -32,13 +32,11 @@ export function RevisionComparison({
       aria-label="Compare source revisions"
     >
       <h3>What changed in the source</h3>
-      <p className="quiet">
-        {rows.coarse
-          ? "Large revision: highlighted comparison regions may include unchanged lines. "
-          : "Changed lines are highlighted. "}{" "}
-        Related proposals and review flags are links, not approval to change
-        work.
-      </p>
+      {rows.coarse && (
+        <p className="quiet">
+          Large revision: highlighted regions may include unchanged lines.
+        </p>
+      )}
       <div className="revision-columns">
         {(
           [

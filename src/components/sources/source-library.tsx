@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import type { WorkspaceData } from "@/client/types";
 import { sampleBrief, sampleTitle } from "@/domain/sources/sample";
-import { createSource } from "../commands";
+import { sourceInput } from "@/domain/contracts";
+import { createSource } from "@/client/commands";
 import { Dialog } from "../dialog";
 
 export function SourceLibrary({
@@ -24,17 +25,11 @@ export function SourceLibrary({
             ▤
           </span>
           <div>
-            <p className="eyebrow">
-              {source.visibility === "private"
-                ? "Only you"
-                : "Workspace source"}{" "}
-              · Text brief
-            </p>
             <h2>{source.title}</h2>
             <p className="muted">
               {source.versionCount}{" "}
-              {source.versionCount === 1 ? "revision" : "revisions"} · Original
-              passages preserved
+              {source.versionCount === 1 ? "revision" : "revisions"}
+              {source.visibility === "private" && " · Private"}
             </p>
           </div>
           <span aria-hidden="true">↗</span>
@@ -45,12 +40,7 @@ export function SourceLibrary({
           <span className="document-icon" aria-hidden="true">
             ▤
           </span>
-          <h2>Start with the source.</h2>
-          <p>
-            Bring a brief, a decision, or a change in direction.
-            <br />
-            Keep the original words close to the work.
-          </p>
+          <h2>No sources yet</h2>
         </div>
       )}
     </div>
@@ -70,17 +60,22 @@ export function NewSource({
   const [text, setText] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [key] = useState(() => crypto.randomUUID());
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     setBusy(true);
     setError("");
     try {
-      const result = await createSource(workspaceId, {
-        title,
-        text,
-        visibility: data.get("visibility"),
-      });
+      const result = await createSource(
+        workspaceId,
+        sourceInput.parse({
+          title,
+          text,
+          visibility: data.get("visibility"),
+        }),
+        key,
+      );
       await onSaved(result.sourceId);
       onClose();
     } catch (error) {
@@ -93,9 +88,6 @@ export function NewSource({
   }
   return (
     <Dialog title="Bring a source" onClose={onClose} wide>
-      <p className="muted">
-        Save the original words. Analysis will propose changes for your review.
-      </p>
       <form onSubmit={submit}>
         <label>
           Source title

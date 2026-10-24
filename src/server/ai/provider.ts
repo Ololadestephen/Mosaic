@@ -6,13 +6,30 @@ import {
   callGemini,
   geminiAvailable,
   geminiRequest,
-  type ProviderResult,
+  GeminiHttpError,
 } from "./gemini";
+import { resolveGeminiOutput } from "./gemini-citations";
+import type { GeminiErrorDetails } from "./gemini-errors";
 import {
   analysisAvailable as openRouterAvailable,
   analysisRequest as openRouterRequest,
   callProvider as callOpenRouter,
 } from "./openrouter";
+
+export type ProviderResult = {
+  output: unknown;
+  usage: Record<string, number | undefined> | null;
+  durationMs: number;
+};
+
+export function providerFailureDetails(error: unknown) {
+  if (!(error instanceof GeminiHttpError)) return null;
+  return {
+    httpStatus: error.httpStatus,
+    code: error.category,
+    details: error.diagnostic satisfies GeminiErrorDetails,
+  };
+}
 
 export function analysisProvider(config = env()) {
   return config.AI_PROVIDER === "gemini"
@@ -46,14 +63,24 @@ export function prepareAnalysis(context: AnalysisContext) {
 
 export async function callProvider(
   request: ReturnType<typeof prepareAnalysis>,
+  source: AnalysisContext["source"],
   signal?: AbortSignal,
   captureResponse?: (raw: string) => Promise<void>,
+  observeUsage?: (
+    metadata: Pick<ProviderResult, "usage" | "durationMs">,
+  ) => void,
 ): Promise<ProviderResult> {
-  if (request.provider === "gemini")
-    return callGemini(request.body, signal, captureResponse);
+  if (request.provider === "gemini") {
+    const response = await callGemini(request.body, signal, captureResponse);
+    observeUsage?.({ usage: response.usage, durationMs: response.durationMs });
+    return {
+      ...response,
+      output: resolveGeminiOutput(response.output, source),
+    };
+  }
   const started = Date.now();
   return {
-    output: await callOpenRouter(request.body, signal),
+    output: await callOpenRouter(request.body, signal, captureResponse),
     usage: null,
     durationMs: Date.now() - started,
   };

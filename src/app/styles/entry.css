@@ -21,24 +21,14 @@
   font-size: clamp(50px, 6vw, 80px);
   line-height: 1.1;
   letter-spacing: -3.7px;
-  margin: 27px 0;
+  margin: 0 0 44px;
 }
 .hero h1 em {
   color: var(--accent);
   font-weight: 400;
 }
-.hero-description {
-  max-width: 515px;
-  font-size: 17px;
-  color: #6d7369;
-  line-height: 1.8;
-  margin-bottom: 30px;
-}
 .hero .button {
   padding: 15px 22px;
-}
-.hero > .quiet {
-  margin-top: 17px;
 }
 .lifecycle {
   display: grid;
@@ -57,14 +47,6 @@
 }
 .lifecycle span {
   font-size: 13px;
-}
-.entry-footer {
-  border-top: 1px solid var(--line);
-  display: flex;
-  justify-content: space-between;
-  padding: 23px 0;
-  color: var(--muted);
-  font-size: 11px;
 }
 .auth-page {
   max-width: 1100px;
@@ -92,12 +74,6 @@
 .text-button:hover {
   background: transparent;
   text-decoration: underline;
-}
-.disclosure {
-  font-size: 11px;
-  line-height: 1.7;
-  color: var(--muted);
-  margin-top: 30px;
 }
 .error {
   background: #faeee9;

@@ -62,6 +62,17 @@ describe("rendered surfaces", () => {
     expect(clear).not.toContain("Confirm the supplier");
   });
 
+  it("does not advertise registration when the workspace is closed", () => {
+    vi.stubEnv("ALLOW_REGISTRATION", "false");
+    try {
+      const home = renderToStaticMarkup(createElement(Home));
+      expect(home).not.toContain("Create your workspace");
+      expect(home).toContain("Sign in to your workspace");
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it("renders the entry, sign-in, and empty workspace states", () => {
     expect(renderToStaticMarkup(createElement(Home))).toContain(
       "Keep work in sync",
@@ -72,8 +83,21 @@ describe("rendered surfaces", () => {
       ),
     ).toContain("Inside");
     expect(
-      renderToStaticMarkup(createElement(AuthForm, { initialRegister: false })),
+      renderToStaticMarkup(
+        createElement(AuthForm, {
+          initialRegister: false,
+          registrationOpen: true,
+        }),
+      ),
     ).toContain("Welcome back.");
+    expect(
+      renderToStaticMarkup(
+        createElement(AuthForm, {
+          initialRegister: false,
+          registrationOpen: false,
+        }),
+      ),
+    ).not.toContain("New here? Create an account");
     expect(
       renderToStaticMarkup(
         <Dialog title="Details" onClose={() => undefined}>
@@ -83,14 +107,14 @@ describe("rendered surfaces", () => {
     ).toContain("Details");
     expect(
       renderToStaticMarkup(createElement(ChangeList, { drafts: [] })),
-    ).toContain("A considered next step.");
+    ).toContain("No proposals yet");
     expect(
       renderToStaticMarkup(
         createElement(SourceLibrary, {
           sources: [] as unknown as WorkspaceData["sources"],
         }),
       ),
-    ).toContain("Start with the source.");
+    ).toContain("No sources yet");
     expect(
       renderToStaticMarkup(
         createElement(Activity, {
@@ -127,22 +151,9 @@ describe("rendered surfaces", () => {
               },
             ],
           },
-          draft: {
-            id: task.id,
-            workspaceId: task.workspaceId,
-            sourceVersionId: task.workspaceId,
-            restrictedTo: null,
-            revision: 1,
-            state: "draft",
-            items: [],
-            questions: [],
-            preserved: [],
-            tasks: [],
-            versions: [],
-            members: [] as unknown as WorkspaceData["members"],
-            receipt: [],
-            analysis: null,
-          },
+          proposalId: task.id,
+          expectedRevision: 1,
+          members: [],
           workspaceId: task.workspaceId,
           onSaved: async () => undefined,
         }),

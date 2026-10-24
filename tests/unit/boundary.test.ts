@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ApiError, api } from "@/components/api";
+import { ApiError, api } from "@/client/api";
 import { z } from "zod";
 import { DomainError } from "@/domain/errors";
 import { readBody } from "@/server/http/body";
@@ -90,5 +90,40 @@ describe("browser client", () => {
       code: "UNAUTHENTICATED",
       requestId: "req",
     });
+  });
+});
+
+it("request cleanup cannot mask a size rejection and releases the reader", async () => {
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new Uint8Array(100_001));
+    },
+    cancel() {
+      return Promise.reject(new Error("synthetic cleanup failure"));
+    },
+  });
+  const request = new Request("http://local/api", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: stream,
+    duplex: "half",
+  } as RequestInit);
+  await expect(readBody(request)).rejects.toMatchObject({
+    code: "INVALID_INPUT",
+    message: "Request is too large.",
+  });
+  expect(stream.locked).toBe(false);
+});
+it("malformed request JSON retains its cause without exposing it publicly", async () => {
+  const request = new Request("http://local/api", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: "{synthetic-broken",
+  });
+  const error = await readBody(request).catch((error: unknown) => error);
+  expect(error).toMatchObject({
+    code: "INVALID_INPUT",
+    message: "Request must contain valid JSON.",
+    cause: expect.any(SyntaxError),
   });
 });

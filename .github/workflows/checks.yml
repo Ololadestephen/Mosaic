@@ -58,5 +58,6 @@ jobs:
         run: |
           npx playwright install --with-deps chromium
           npm run test:e2e
+          MOSAIC_E2E_MOCK_ANALYSIS=1 npx playwright test tests/e2e/analysis-handoff.spec.ts
       # Reports remain on the runner; no internal evidence is uploaded.
       # Fork PRs run only with disposable PostgreSQL and no repository secrets.

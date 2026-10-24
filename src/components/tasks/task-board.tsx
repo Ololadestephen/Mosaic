@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import type { Task } from "@/domain/contracts";
+import { createTaskInput, type Task } from "@/domain/contracts";
 import { PASSAGE_REVIEW_LABEL } from "@/domain/sources/passage-change";
 import type { WorkspaceData } from "@/client/types";
-import { createTask } from "../commands";
+import { createTask } from "@/client/commands";
 import { Dialog } from "../dialog";
 
 export const statusLabels = {
@@ -57,7 +57,6 @@ export function TaskFields({
       <label>
         Due date
         <input name="dueDate" type="date" defaultValue={task?.dueDate ?? ""} />
-        <small>Date only · displayed without timezone conversion</small>
       </label>
     </>
   );
@@ -93,10 +92,7 @@ export function TaskBoard({
               .filter((task) => task.status === status)
               .map((task) => (
                 <article className="task-card" key={task.id}>
-                  <p className="task-overline">
-                    {task.restrictedTo ? "Private work" : "Workspace task"}
-                    <span>↗</span>
-                  </p>
+                  {task.restrictedTo && <span className="pill">Private</span>}
                   <h3>
                     <Link href={`/app/tasks/${task.id}`}>{task.title}</Link>
                   </h3>
@@ -117,16 +113,8 @@ export function TaskBoard({
                       {dateLabel(task.dueDate)}
                     </time>
                   </div>
-                  <Link className="why-link" href={`/app/tasks/${task.id}`}>
-                    Why this work? <span aria-hidden="true">↗</span>
-                  </Link>
                 </article>
               ))}
-            <p className="column-empty">
-              {filtered.some((task) => task.status === status)
-                ? ""
-                : "Room for what comes next."}
-            </p>
           </div>
         </section>
       ))}
@@ -148,6 +136,21 @@ export function NewTask({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [key] = useState(() => crypto.randomUUID());
+  const [committed, setCommitted] = useState(false);
+  async function refreshSaved() {
+    setBusy(true);
+    setError("");
+    try {
+      await onSaved();
+      onClose();
+    } catch {
+      setError(
+        "Task created. The board could not refresh; retry loading it without creating another task.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -156,17 +159,17 @@ export function NewTask({
     try {
       await createTask(
         workspaceId,
-        {
+        createTaskInput.parse({
           title: form.get("title"),
           status: form.get("status"),
           assigneeId: form.get("assigneeId") || null,
           dueDate: form.get("dueDate") || null,
           visibility: form.get("visibility"),
-        },
+        }),
         key,
       );
-      await onSaved();
-      onClose();
+      setCommitted(true);
+      await refreshSaved();
     } catch (error) {
       setError(
         error instanceof Error ? error.message : "Could not create task.",
@@ -177,32 +180,42 @@ export function NewTask({
   }
   return (
     <Dialog title="Add a task" onClose={onClose}>
-      <p className="muted">
-        A manual task, attributed to you. To create source-backed work, add a
-        brief and review its proposals.
-      </p>
-      <form onSubmit={submit}>
-        <label>
-          Task title
-          <input name="title" required maxLength={180} />
-        </label>
-        <TaskFields members={members} />
-        <label>
-          Visibility
-          <select name="visibility">
-            <option value="workspace">Workspace</option>
-            <option value="private">Only me</option>
-          </select>
-        </label>
-        {error && (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        )}
-        <button className="primary" disabled={busy}>
-          {busy ? "Saving…" : "Create task"}
-        </button>
-      </form>
+      {committed ? (
+        <div>
+          <p role="status">Task created.</p>
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
+          <button disabled={busy} onClick={refreshSaved}>
+            Refresh saved task
+          </button>
+        </div>
+      ) : (
+        <form onSubmit={submit}>
+          <label>
+            Task title
+            <input name="title" required maxLength={180} />
+          </label>
+          <TaskFields members={members} />
+          <label>
+            Visibility
+            <select name="visibility">
+              <option value="workspace">Workspace</option>
+              <option value="private">Only me</option>
+            </select>
+          </label>
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
+          <button className="primary" disabled={busy}>
+            {busy ? "Saving…" : "Create task"}
+          </button>
+        </form>
+      )}
     </Dialog>
   );
 }

@@ -50,12 +50,6 @@ const completion = z.object({
   usageMetadata: usage.optional(),
 });
 
-export type ProviderResult = {
-  output: unknown;
-  usage: z.infer<typeof usage> | null;
-  durationMs: number;
-};
-
 export function geminiAvailable(config = env()) {
   return (
     config.AI_ENABLED === "true" &&
@@ -123,7 +117,7 @@ export async function callGemini(
   body: string,
   signal?: AbortSignal,
   captureResponse?: (raw: string) => Promise<void>,
-): Promise<ProviderResult> {
+) {
   const config = env();
   requireCondition(
     geminiAvailable(config),
@@ -199,17 +193,23 @@ export async function callGemini(
       throw new DomainError(
         "PROVIDER_FAILED",
         "Analysis was cancelled. No proposal was saved; check this run before retrying.",
+        { cause: error },
       );
+    if (error instanceof SyntaxError || error instanceof z.ZodError)
+      throw new DomainError(
+        "INVALID_OUTPUT",
+        "Gemini returned malformed JSON or unsupported proposal fields. No proposal was saved and no repair call was made. Your source is saved.",
+        { cause: error },
+      );
+    const timedOut =
+      error instanceof Error &&
+      ["TimeoutError", "AbortError"].includes(error.name);
     throw new DomainError(
-      error instanceof SyntaxError || error instanceof z.ZodError
-        ? "INVALID_OUTPUT"
-        : "PROVIDER_FAILED",
-      error instanceof SyntaxError || error instanceof z.ZodError
-        ? "Gemini returned malformed JSON or unsupported proposal fields. No proposal was saved and no repair call was made. Your source is saved."
-        : error instanceof Error &&
-            ["TimeoutError", "AbortError"].includes(error.name)
-          ? "Gemini timed out. No automatic retry was made; your source is saved."
-          : "Gemini returned an unusable response or could not be reached. No proposal was saved.",
+      "PROVIDER_FAILED",
+      timedOut
+        ? "Gemini timed out. No automatic retry was made; your source is saved."
+        : "Gemini returned an unusable response or could not be reached. No proposal was saved.",
+      { cause: error },
     );
   }
 }

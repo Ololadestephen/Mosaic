@@ -9,6 +9,8 @@ describe("publication boundary", () => {
     ".desloppify/state.json",
     "src/.env.local",
     "backup.dump",
+    "scripts/__pycache__/audit.cpython.pyc",
+    "scripts/audit.pyc",
     "private.pem",
     "database.sqlite3",
     "pgdata/base/123",

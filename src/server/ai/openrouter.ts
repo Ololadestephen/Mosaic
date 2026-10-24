@@ -107,11 +107,16 @@ function assertAnalysisEnabled() {
 async function providerFailure(response: Response) {
   const raw = await response.text();
   try {
-    const body = JSON.parse(raw) as {
-      error?: { message?: string } | string;
-    };
+    const result = z
+      .object({
+        error: z.union([z.string(), z.object({ message: z.string() })]),
+      })
+      .safeParse(JSON.parse(raw));
+    if (!result.success) return "";
     const message =
-      typeof body.error === "string" ? body.error : body.error?.message;
+      typeof result.data.error === "string"
+        ? result.data.error
+        : result.data.error.message;
     return message?.replace(/sk-[A-Za-z0-9_-]+/g, "[redacted]").slice(0, 240);
   } catch {
     return "";
@@ -128,6 +133,7 @@ function messageText(content: string | { text?: string }[] | null | undefined) {
 export async function callProvider(
   body: string,
   signal?: AbortSignal,
+  captureResponse?: (raw: string) => Promise<void>,
 ): Promise<unknown> {
   assertAnalysisEnabled();
   const config = env();
@@ -167,6 +173,7 @@ export async function callProvider(
       "PROVIDER_FAILED",
       "The model response exceeded the allowed size.",
     );
+    await captureResponse?.(text);
     const parsed = completion.parse(JSON.parse(text));
     const choice = parsed.choices[0];
     requireCondition(
@@ -188,6 +195,7 @@ export async function callProvider(
         ["TimeoutError", "AbortError"].includes(error.name)
         ? "Analysis timed out. Your source is saved; check this run before retrying."
         : "The model returned an unusable response. No work was changed.",
+      { cause: error },
     );
   }
 }

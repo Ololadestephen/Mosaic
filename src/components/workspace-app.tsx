@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Account, WorkspaceData } from "@/client/types";
-import { listWorkspaces, loadWorkspace, signOut } from "./commands";
+import { listWorkspaces, loadWorkspace, signOut } from "@/client/commands";
 import { NewTask } from "./tasks/task-board";
 import { TaskDetailPanel } from "./tasks/task-detail";
 import { NewSource } from "./sources/source-library";
@@ -106,7 +106,6 @@ export function WorkspaceApp({
           Mosaic
         </Link>
         <div className="workspace-picker">
-          <p className="eyebrow">Your workspace</p>
           <select
             aria-label="Active workspace"
             value={workspaceId}
@@ -154,14 +153,6 @@ export function WorkspaceApp({
             </Link>
           ))}
         </nav>
-        <div className="sidebar-note">
-          <span aria-hidden="true">✳</span>
-          <p>
-            Change the plan.
-            <br />
-            Keep the reason.
-          </p>
-        </div>
         <footer className="account">
           <span className="avatar">{account.name.slice(0, 1)}</span>
           <div>
@@ -183,12 +174,6 @@ export function WorkspaceApp({
       <div className="main-area">
         <header className="topbar">
           <span>{space?.name ?? "Welcome to Mosaic"}</span>
-          <span className="topbar-note">
-            <span className="status-dot" />
-            {snapshot?.aiEnabled
-              ? "Live analysis available"
-              : "Local workspace"}
-          </span>
         </header>
         <main className="workspace-main">
           {error && (
@@ -242,12 +227,6 @@ export function WorkspaceApp({
             )
           )}
         </main>
-        <footer className="workspace-footer">
-          <span>
-            Mosaic <span aria-hidden="true">/</span> Work, with a reason
-          </span>
-          <span>Sources → Review → Apply → Verify → Undo</span>
-        </footer>
       </div>
       {snapshot && modal === "source" && (
         <NewSource

@@ -1,19 +1,22 @@
 "use client";
 import { useState } from "react";
 import type { ProposalItem } from "@/domain/contracts";
-import type { getProposal } from "@/client/types";
+import type { Proposal } from "@/client/types";
 import { statusLabels } from "../tasks/task-board";
-import { editProposal } from "../commands";
-type Proposal = Awaited<ReturnType<typeof getProposal>>;
+import { editProposal } from "@/client/commands";
 
 export function EditValue({
   item,
-  draft,
+  proposalId,
+  expectedRevision,
+  members,
   workspaceId,
   onSaved,
 }: {
   item: ProposalItem;
-  draft: Proposal;
+  proposalId: string;
+  expectedRevision: number;
+  members: Proposal["members"];
   workspaceId: string;
   onSaved: () => Promise<void>;
 }) {
@@ -23,7 +26,34 @@ export function EditValue({
   );
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [refreshPending, setRefreshPending] = useState(false);
+  async function refreshSaved() {
+    setBusy(true);
+    try {
+      await onSaved();
+      setRefreshPending(false);
+      setError("");
+    } catch {
+      setRefreshPending(true);
+      setError(
+        "Proposed value saved. Refresh the proposal before editing again.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
   if (item.kind !== "update") return null;
+  if (refreshPending)
+    return (
+      <div>
+        <p role="alert" className="error">
+          {error}
+        </p>
+        <button disabled={busy} onClick={refreshSaved}>
+          Refresh saved proposal
+        </button>
+      </div>
+    );
   if (!editing)
     return (
       <button className="text-button" onClick={() => setEditing(true)}>
@@ -38,13 +68,14 @@ export function EditValue({
         setBusy(true);
         setError("");
         try {
-          await editProposal(workspaceId, draft.id, {
-            expectedRevision: draft.revision,
+          await editProposal(workspaceId, proposalId, {
+            expectedRevision: expectedRevision,
             key: item.key,
             value: value || null,
           });
-          await onSaved();
           setEditing(false);
+          setRefreshPending(true);
+          await refreshSaved();
         } catch (error) {
           setError(
             error instanceof Error ? error.message : "Could not edit proposal.",
@@ -73,7 +104,7 @@ export function EditValue({
             onChange={(event) => setValue(event.target.value)}
           >
             <option value="">Unassigned</option>
-            {draft.members.map((member) => (
+            {members.map((member) => (
               <option key={member.id} value={member.id}>
                 {member.name}
               </option>
@@ -87,10 +118,6 @@ export function EditValue({
           />
         )}
       </label>
-      <small>
-        Your choice will be attributed to you. The original citation remains as
-        context.
-      </small>
       {error && (
         <p className="error" role="alert">
           {error}

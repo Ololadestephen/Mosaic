@@ -1,6 +1,11 @@
 import "server-only";
 import { createHash, randomUUID } from "node:crypto";
-import { applyInput, type Actor, type FieldChange } from "@/domain/contracts";
+import {
+  applyCommand,
+  applyInput,
+  type Actor,
+  type FieldChange,
+} from "@/domain/contracts";
 import { requireCondition } from "@/domain/errors";
 import { validateAnalysis } from "@/domain/reconciliation/validate";
 import { assertVisible, inWorkspace } from "./auth/authorization";
@@ -12,7 +17,7 @@ import {
   type BatchResult,
   type StoredBatch,
 } from "./journal";
-import { analysisContext } from "./reconciliation";
+import { proposalContext } from "./reconciliation";
 import { insertTask, mutateField } from "./tasks";
 
 function creationId(changeSetId: string, itemKey: string): string {
@@ -26,8 +31,10 @@ export async function applyProposal(
   actor: Actor,
   workspaceId: string,
   raw: unknown,
+  operationKey: string,
 ): Promise<BatchResult> {
-  const input = applyInput.parse(raw);
+  const command = applyCommand.parse(raw);
+  const input = applyInput.parse({ ...command, operationKey });
   const hash = requestHash({
     ...input,
     selectedKeys: [...input.selectedKeys].sort((left, right) =>
@@ -61,11 +68,19 @@ export async function applyProposal(
       );
       return item;
     });
-    const context = await analysisContext(
+    const targetIds = [
+      ...new Set(
+        selected.flatMap((item) =>
+          item.kind === "update" ? [item.taskId] : [],
+        ),
+      ),
+    ].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
+    const context = await proposalContext(
       tx,
       actor,
       workspaceId,
       draft.sourceVersionId,
+      targetIds,
     );
     const [latest] = await tx<
       { id: string }[]
@@ -76,13 +91,6 @@ export async function applyProposal(
       "This source was explicitly revised again. Analyze the latest revision before applying work.",
     );
     // The workspace lock serializes every supported mutation and membership change.
-    const targetIds = [
-      ...new Set(
-        selected.flatMap((item) =>
-          item.kind === "update" ? [item.taskId] : [],
-        ),
-      ),
-    ].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
     if (targetIds.length)
       await tx`SELECT id FROM tasks WHERE workspace_id = ${workspaceId} AND id IN ${tx(targetIds)} ORDER BY id FOR UPDATE`;
     validateAnalysis(
@@ -231,7 +239,7 @@ export async function lookupOperation(
   return verifyBatch(actor, workspaceId, batchId);
 }
 
-export async function verifiedWrite(
+export async function writeAndAttemptVerification(
   actor: Actor,
   workspaceId: string,
   write: () => Promise<BatchResult>,

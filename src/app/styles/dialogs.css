@@ -30,9 +30,6 @@
   margin: 0;
   letter-spacing: -0.5px;
 }
-.dialog > .muted {
-  font-size: 12px;
-}
 .inline-actions {
   display: flex;
   gap: 24px;

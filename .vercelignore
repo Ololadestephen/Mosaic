@@ -31,3 +31,9 @@ credentials
 .aws
 .vercel
 .github
+
+__pycache__/
+*.pyc
+
+# CI-only App fixtures and evidence tools are not runtime deployment inputs.
+scripts/testsprite/

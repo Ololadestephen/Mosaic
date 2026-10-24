@@ -6,22 +6,6 @@
   gap: 16px;
   margin-bottom: 26px;
 }
-.view-label {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  color: var(--accent);
-  font-size: 15px;
-}
-.view-label b {
-  font-size: 12px;
-  font-weight: 500;
-}
-.view-label span {
-  font-size: 10px;
-  color: var(--muted);
-  margin-left: 8px;
-}
 .search {
   margin-left: auto;
   max-width: 190px;
@@ -79,25 +63,16 @@
   border: 1px solid #e0e3d6;
   background: var(--surface);
   border-radius: 7px;
-  padding: 17px 16px 0;
+  padding: 17px 16px;
   box-shadow: 0 2px 3px #424d2b03;
   transition: border-color 0.15s;
 }
 .task-card:hover {
   border-color: #a4b395;
 }
-.task-overline {
-  font-size: 8px;
-  color: #939988;
-  text-transform: uppercase;
-  letter-spacing: 1.1px;
-  display: flex;
-  justify-content: space-between;
-  margin: 0 0 12px;
-}
-.task-overline span {
-  font-size: 12px;
-  color: #9da78f;
+.task-card > .pill {
+  display: inline-block;
+  margin-bottom: 10px;
 }
 .task-card h3 {
   font-size: 13px;
@@ -131,16 +106,6 @@
   color: #818e74;
   min-height: 34px;
 }
-.column-empty {
-  font-family: Georgia, serif;
-  font-size: 13px;
-  color: #a6ac9d;
-  text-align: center;
-  margin: 30px 0;
-}
-.column-empty:empty {
-  display: none;
-}
 .board-welcome {
   display: flex;
   align-items: center;
@@ -157,41 +122,14 @@
   font-weight: 400;
   margin: 0 0 6px;
 }
-.board-welcome p {
-  font-size: 11px;
-  color: var(--muted);
-  margin: 0;
-}
 .document-icon {
   color: #8b9b7f;
   display: block;
   font-size: 30px;
 }
-.board-footnote {
-  font-size: 10px;
-  color: #959b8a;
-  border-top: 1px solid var(--line);
-  padding-top: 20px;
-  margin-top: 40px;
-}
-.workspace-footer {
-  display: flex;
-  justify-content: space-between;
-  padding: 19px 43px;
-  border-top: 1px solid var(--line);
-  font-size: 9px;
-  color: #989e8e;
-  gap: 18px;
-}
-.workspace-footer > span > span {
-  padding: 0 8px;
-}
 .onboarding {
   max-width: 550px;
   padding: 50px 0;
-}
-.onboarding p {
-  color: var(--muted);
 }
 .onboarding form {
   margin-top: 30px;

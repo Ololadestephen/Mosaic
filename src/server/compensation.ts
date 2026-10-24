@@ -2,6 +2,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import {
   undoInput,
+  undoCommand,
   type Actor,
   type FieldChange,
   type UndoOutcome,
@@ -97,8 +98,10 @@ export async function compensate(
   actor: Actor,
   workspaceId: string,
   raw: unknown,
+  operationKey: string,
 ): Promise<BatchResult & { outcomes: UndoOutcome[] }> {
-  const input = undoInput.parse(raw);
+  const command = undoCommand.parse(raw);
+  const input = undoInput.parse({ ...command, operationKey });
   const hash = requestHash(input);
   return inWorkspace(actor, workspaceId, "write", async (tx) => {
     const prior = await existingOperation(
