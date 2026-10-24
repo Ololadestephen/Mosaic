@@ -1,6 +1,6 @@
 import "server-only";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
-import { credentials } from "@/domain/contracts";
+import { accessLinkInput, credentials } from "@/domain/contracts";
 import { DomainError, requireCondition } from "@/domain/errors";
 import { db } from "../db/client";
 import { registrationOpen } from "../env";
@@ -67,9 +67,62 @@ export async function signIn(
       );
     account = { id: found.id, email: found.email, name: found.name };
   }
+  return startSession(account);
+}
+
+async function startSession(account: Account, notAfter?: Date) {
   const token = randomBytes(32).toString("base64url");
-  await db()`INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (${digest(token)}, ${account.id}, now() + interval '7 days')`;
+  await db()`INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (${digest(token)}, ${account.id}, LEAST(now() + interval '7 days', ${notAfter ?? null}::timestamptz))`;
   return { account, token };
+}
+
+// Access-link rows share the sessions table under a separate key namespace: digest() output is hex, so a link key
+// never matches a session cookie lookup, and a session token never matches a link lookup.
+const linkKey = (token: string) => `link:${digest(token)}`;
+const refusedLink = () =>
+  new DomainError(
+    "UNAUTHENTICATED",
+    "This access link is invalid or has expired.",
+  );
+
+export async function issueAccessLink(userId: string, expiresAt: Date) {
+  requireCondition(
+    expiresAt.getTime() > Date.now(),
+    "INVALID_INPUT",
+    "An access link must expire in the future.",
+  );
+  const token = randomBytes(32).toString("base64url");
+  const [issued] = await db()<{ user_id: string }[]>`
+    INSERT INTO sessions (token_hash, user_id, expires_at)
+    SELECT ${linkKey(token)}, id, ${expiresAt} FROM users WHERE id = ${userId}
+    RETURNING user_id`;
+  requireCondition(issued, "NOT_FOUND", "Account not found.");
+  return token;
+}
+
+// Exchanges a private access link for an ordinary session that ends no later than the link itself. Signing out ends
+// only that browser session. Attempts are limited per client; the 256-bit token makes guessing impractical.
+export async function signInWithLink(
+  raw: unknown,
+  client: string,
+): Promise<{ account: Account; token: string }> {
+  await rateLimit(`link-client:${client}`);
+  const input = accessLinkInput.safeParse(raw);
+  if (!input.success) throw refusedLink();
+  const [link] = await db()<(Account & { expires_at: Date })[]>`
+    SELECT u.id, u.email, u.name, s.expires_at FROM sessions s JOIN users u ON u.id = s.user_id
+    WHERE s.token_hash = ${linkKey(input.data.token)} AND s.expires_at > now()`;
+  if (!link) throw refusedLink();
+  return startSession(
+    { id: link.id, email: link.email, name: link.name },
+    link.expires_at,
+  );
+}
+
+// Ends all access for an account: its access links and every session, including sessions started from a link.
+export async function revokeAccess(userId: string) {
+  const removed = await db()`DELETE FROM sessions WHERE user_id = ${userId}`;
+  return removed.count;
 }
 
 export async function resolveSession(token?: string): Promise<Account | null> {

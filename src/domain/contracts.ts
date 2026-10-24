@@ -52,6 +52,9 @@ export const editTaskInput = taskFields
     (value) => Object.keys(value).length > 1,
     "Choose at least one field.",
   );
+export const accessLinkInput = z
+  .object({ token: z.string().regex(/^[A-Za-z0-9_-]{43,100}$/) })
+  .strict();
 export const sourceInput = z
   .object({
     title: z.string().trim().min(1).max(180),

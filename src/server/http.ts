@@ -9,6 +9,7 @@ import {
   resolveSession,
   sessionCookie,
   signIn,
+  signInWithLink,
   signOut,
 } from "./auth/accounts";
 import { env } from "./env";
@@ -38,14 +39,19 @@ export async function handleRequest(
         return response;
       }
       requireCondition(
-        path[1] === "register" || path[1] === "login",
+        ["register", "login", "link"].includes(path[1]),
         "NOT_FOUND",
         "Route not found.",
       );
-      const result = await signIn(
-        await readBody(request),
-        path[1] === "register",
-      );
+      const body = await readBody(request);
+      const result =
+        path[1] === "link"
+          ? await signInWithLink(
+              body,
+              // On Vercel x-real-ip equals x-forwarded-for, which the platform overwrites with the connecting client's IP.
+              request.headers.get("x-real-ip") ?? "unknown",
+            )
+          : await signIn(body, path[1] === "register");
       const response = NextResponse.json(result.account);
       response.cookies.set(sessionCookie, result.token, {
         httpOnly: true,
