@@ -195,6 +195,15 @@ export function signIn(register: boolean, body: z.input<typeof credentials>) {
   );
 }
 
+export function signInWithLink(token: string) {
+  return api(
+    "auth/link",
+    z.object({ id: z.string() }).catchall(z.unknown()),
+    "POST",
+    { token },
+  );
+}
+
 export function signOut() {
   return api("auth/logout", z.object({ ok: z.literal(true) }), "POST");
 }
