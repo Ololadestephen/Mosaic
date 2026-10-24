@@ -142,6 +142,78 @@ describe("domain boundaries", () => {
       }),
     ).toThrow("outside");
   });
+  it("drops preserved entries that name work the proposal changes or creates", () => {
+    const versionId = randomUUID();
+    const text = "Do not rebuild the reporting VM. Restore it from snapshot.";
+    const current = {
+      id: versionId,
+      sourceId: randomUUID(),
+      text,
+      number: 1,
+      predecessorId: null,
+    };
+    const task = (title: string) => ({
+      id: randomUUID(),
+      workspaceId: randomUUID(),
+      title,
+      status: "todo" as const,
+      assigneeId: null,
+      dueDate: null,
+      revision: 1,
+      archived: false,
+      lineage: {},
+      restrictedTo: null,
+    });
+    const rebuild = task("Rebuild reporting VM");
+    const audit = task("Audit backups");
+    const citations = [
+      {
+        sourceVersionId: versionId,
+        start: 0,
+        end: 32,
+        quote: text.slice(0, 32),
+      },
+    ];
+    const output = validateAnalysis(
+      {
+        items: [
+          {
+            kind: "update",
+            key: "rebuild",
+            taskId: rebuild.id,
+            expectedRevision: 1,
+            field: "assigneeId",
+            value: null,
+            reason: "Unassigned",
+            impact: "",
+            citations,
+          },
+          {
+            kind: "create",
+            key: "restore",
+            title: "Restore reporting VM from snapshot",
+            fields: { status: "todo", assigneeId: null, dueDate: null },
+            reason: "New approach",
+            impact: "",
+            citations,
+          },
+        ],
+        questions: [],
+        preserved: [
+          "Rebuild reporting VM stays open.",
+          "restore reporting vm from snapshot is unchanged",
+          "Audit backups is unaffected.",
+        ],
+      },
+      {
+        tasks: [rebuild, audit],
+        memberIds: [],
+        versions: [current],
+        currentVersionId: versionId,
+      },
+    );
+    expect(output.preserved).toEqual(["Audit backups is unaffected."]);
+  });
   it("salts real password hashes and verifies credentials", async () => {
     const hash = await hashPassword("a long test password");
     expect(await verifyPassword("a long test password", hash)).toBe(true);
