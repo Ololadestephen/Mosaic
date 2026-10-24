@@ -176,6 +176,37 @@ describe("shared judge lobby", () => {
     });
   });
 
+  it("closing the lobby while judges enter never leaves a seat session alive", async () => {
+    for (let round = 0; round < 12; round++) {
+      await closeLobby();
+      await open();
+      await Promise.allSettled([
+        enterLobby({ token: lobby, seat: 1 }, client()),
+        enterLobby({ token: lobby, seat: 2 }, client()),
+        closeLobby(),
+      ]);
+      const [{ n }] = await db()<{ n: number }[]>`
+        SELECT count(*)::int AS n FROM sessions
+        WHERE user_id = ANY(${seatIds}) AND token_hash ~ '^[0-9a-f]{64}$'`;
+      expect(n).toBe(0);
+    }
+  });
+
+  it("a release racing an entry leaves the seat either fully claimed or fully free", async () => {
+    for (let round = 0; round < 12; round++) {
+      await releaseSeat(1);
+      await Promise.allSettled([
+        enterLobby({ token: lobby, seat: 1 }, client()),
+        releaseSeat(1),
+      ]);
+      const [state] = await db()<{ sessions: number; claimed: boolean }[]>`
+        SELECT
+          (SELECT count(*)::int FROM sessions WHERE user_id = ${seatIds[0]} AND token_hash ~ '^[0-9a-f]{64}$') AS sessions,
+          EXISTS (SELECT 1 FROM sessions WHERE token_hash = 'claim:1') AS claimed`;
+      expect(state.sessions > 0).toBe(state.claimed);
+    }
+  });
+
   it("sets HttpOnly session and seat cookies over HTTP and resumes from the seat cookie", async () => {
     const request = (route: string, body: object) =>
       new Request(`http://localhost:3000/api/auth/${route}`, {

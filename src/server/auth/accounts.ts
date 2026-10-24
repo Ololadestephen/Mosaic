@@ -2,7 +2,7 @@ import "server-only";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { accessLinkInput, credentials } from "@/domain/contracts";
 import { DomainError, requireCondition } from "@/domain/errors";
-import { db } from "../db/client";
+import { db, type Database, type Transaction } from "../db/client";
 import { registrationOpen } from "../env";
 import { hashPassword, verifyPassword } from "./password";
 
@@ -70,9 +70,13 @@ export async function signIn(
   return startSession(account);
 }
 
-export async function startSession(account: Account, notAfter?: Date) {
+export async function startSession(
+  account: Account,
+  notAfter?: Date,
+  sql: Database | Transaction = db(),
+) {
   const token = randomBytes(32).toString("base64url");
-  await db()`INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (${digest(token)}, ${account.id}, LEAST(now() + interval '7 days', ${notAfter ?? null}::timestamptz))`;
+  await sql`INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (${digest(token)}, ${account.id}, LEAST(now() + interval '7 days', ${notAfter ?? null}::timestamptz))`;
   return { account, token };
 }
 
@@ -109,20 +113,30 @@ export async function signInWithLink(
   await rateLimit(`link-client:${client}`);
   const input = accessLinkInput.safeParse(raw);
   if (!input.success) throw refusedLink();
-  const [link] = await db()<(Account & { expires_at: Date })[]>`
-    SELECT u.id, u.email, u.name, s.expires_at FROM sessions s JOIN users u ON u.id = s.user_id
-    WHERE s.token_hash = ${linkKey(input.data.token)} AND s.expires_at > now()`;
-  if (!link) throw refusedLink();
-  return startSession(
-    { id: link.id, email: link.email, name: link.name },
-    link.expires_at,
-  );
+  const key = linkKey(input.data.token);
+  // The shared lock on the link row makes revocation wait for this exchange, or this exchange see the revocation.
+  return db().begin(async (tx) => {
+    const [link] = await tx<(Account & { expires_at: Date })[]>`
+      SELECT u.id, u.email, u.name, s.expires_at FROM sessions s JOIN users u ON u.id = s.user_id
+      WHERE s.token_hash = ${key} AND s.expires_at > now() FOR SHARE OF s`;
+    if (!link) throw refusedLink();
+    return startSession(
+      { id: link.id, email: link.email, name: link.name },
+      link.expires_at,
+      tx,
+    );
+  });
 }
 
 // Ends all access for an account: its access links and every session, including sessions started from a link.
 export async function revokeAccess(userId: string) {
-  const removed = await db()`DELETE FROM sessions WHERE user_id = ${userId}`;
-  return removed.count;
+  return db().begin(async (tx) => {
+    // Lock the account's links first; the delete then runs on a fresh snapshot that includes any session an
+    // in-flight exchange committed while this waited.
+    await tx`SELECT 1 FROM sessions WHERE user_id = ${userId} AND token_hash LIKE 'link:%' FOR UPDATE`;
+    const removed = await tx`DELETE FROM sessions WHERE user_id = ${userId}`;
+    return removed.count;
+  });
 }
 
 export async function resolveSession(token?: string): Promise<Account | null> {
