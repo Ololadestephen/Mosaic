@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { WorkspaceData } from "@/client/types";
 import { workspaceInput, memberInput } from "@/domain/contracts";
 import { createWorkspace, saveMember } from "@/client/commands";
+import { Arrow } from "./icons";
 
 export function WorkspaceForm({
   onCreated,
@@ -47,7 +48,7 @@ export function WorkspaceForm({
           </p>
         )}
         <button className="primary" disabled={busy}>
-          {busy ? "Creating…" : "Create workspace ↗"}
+          {busy ? "Creating…" : "Create workspace"} {!busy && <Arrow />}
         </button>
       </form>
     </section>

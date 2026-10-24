@@ -8,6 +8,7 @@ import type { TaskDetail } from "@/client/types";
 import { editTask, loadTask } from "@/client/commands";
 import { Dialog } from "../dialog";
 import { TaskFields, type Members } from "./task-board";
+import { Arrow } from "../icons";
 
 export function TaskDetailPanel({
   workspaceId,
@@ -117,7 +118,7 @@ export function TaskDetailPanel({
                     <Link
                       href={`/app/sources/${evidence.sourceId}?version=${evidence.sourceVersionId}&start=${evidence.start}&end=${evidence.end}`}
                     >
-                      {evidence.sourceTitle} · v{evidence.version} ↗
+                      {evidence.sourceTitle} · v{evidence.version} <Arrow />
                     </Link>
                   </cite>
                 </blockquote>

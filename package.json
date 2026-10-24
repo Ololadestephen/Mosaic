@@ -45,6 +45,8 @@
     "quality:review": "desloppify --lang typescript review --prepare"
   },
   "dependencies": {
+    "lucide-react": "1.52.0",
+    "motion": "13.5.1",
     "next": "16.4.2",
     "postgres": "3.4.9",
     "react": "19.3.1",

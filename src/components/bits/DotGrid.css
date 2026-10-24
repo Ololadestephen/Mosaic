@@ -1,0 +1,15 @@
+/* Adapted from React Bits (https://reactbits.dev), Copyright (c) 2026 David Haz. MIT + Commons Clause. */
+.dot-grid {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.dot-grid__canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}

@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { GlowCard } from "../glow-card";
 import type { Proposal } from "@/client/types";
 import { RevisionComparison } from "../sources/revision-comparison";
 import { ProposalGroups } from "./proposal-review";
 import { useChangeReview } from "./use-change-review";
+import { Arrow } from "../icons";
 
 export function ChangeList({
   drafts,
@@ -14,25 +16,23 @@ export function ChangeList({
   return (
     <div className="source-list">
       {drafts.map((draft) => (
-        <Link
-          className="source-card"
-          key={draft.id}
-          href={`/app/changes/${draft.id}`}
-        >
-          <div>
-            <p className="eyebrow">
-              {draft.state === "applied" ? "Applied" : "Needs your review"}
-            </p>
-            <h2>Source proposal · {draft.id.slice(0, 8)}</h2>
-          </div>
-          <span>↗</span>
-        </Link>
+        <GlowCard className="source-card-shell" key={draft.id}>
+          <Link className="source-card" href={`/app/changes/${draft.id}`}>
+            <div>
+              <p className="eyebrow">
+                {draft.state === "applied" ? "Applied" : "Needs your review"}
+              </p>
+              <h2>Source proposal · {draft.id.slice(0, 8)}</h2>
+            </div>
+            <Arrow />
+          </Link>
+        </GlowCard>
       ))}
       {!drafts.length && (
         <div className="empty-panel">
           <h2>No proposals yet</h2>
           <Link href="/app/sources" className="button">
-            Open sources ↗
+            Open sources <Arrow />
           </Link>
         </div>
       )}
@@ -120,7 +120,9 @@ export function ChangeReview({
           {review.result.verification === "verified"
             ? "Persistence verified."
             : "Commit recorded; readback verification is pending."}{" "}
-          <Link href="/app/activity">Inspect history ↗</Link>
+          <Link href="/app/activity">
+            Inspect history <Arrow />
+          </Link>
         </div>
       )}
       {error && (
@@ -230,7 +232,7 @@ function AppliedReceipt({
                   <Link
                     href={`/app/sources/${version.sourceId}?version=${citation.sourceVersionId}&start=${citation.start}&end=${citation.end}`}
                   >
-                    Evidence ↗
+                    Evidence <Arrow />
                   </Link>
                 </>
               )}

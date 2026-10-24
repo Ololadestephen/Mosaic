@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { LogOut } from "lucide-react";
+import { LineNav } from "./bits/LineNav";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Account, WorkspaceData } from "@/client/types";
@@ -130,29 +132,19 @@ export function WorkspaceApp({
             )}
           </select>
         </div>
-        <nav aria-label="Workspace navigation">
-          {workspacePages.map(([path, label, icon]) => (
-            <Link
-              key={path}
-              href={`/app${path ? `/${path}` : ""}`}
-              className={section === path ? "active" : ""}
-              aria-current={section === path ? "page" : undefined}
-            >
-              <span aria-hidden="true">{icon}</span>
-              {label}
-              {path === "changes" &&
-                !!snapshot?.drafts.filter((draft) => draft.state === "draft")
-                  .length && (
-                  <small>
-                    {
-                      snapshot.drafts.filter((draft) => draft.state === "draft")
-                        .length
-                    }
-                  </small>
-                )}
-            </Link>
-          ))}
-        </nav>
+        <LineNav
+          label="Workspace navigation"
+          items={workspacePages.map(([path, label]) => ({
+            href: `/app${path ? `/${path}` : ""}`,
+            label,
+            active: section === path,
+            badge:
+              path === "changes"
+                ? snapshot?.drafts.filter((draft) => draft.state === "draft")
+                    .length
+                : undefined,
+          }))}
+        />
         <footer className="account">
           <span className="avatar">{account.name.slice(0, 1)}</span>
           <div>
@@ -167,13 +159,17 @@ export function WorkspaceApp({
               router.replace("/");
             }}
           >
-            ↪
+            <LogOut size={16} strokeWidth={1.8} aria-hidden="true" />
           </button>
         </footer>
       </aside>
       <div className="main-area">
         <header className="topbar">
           <span>{space?.name ?? "Welcome to Mosaic"}</span>
+          <span aria-hidden="true">/</span>
+          <b>
+            {workspacePages.find(([path]) => path === section)?.[1] ?? "Task"}
+          </b>
         </header>
         <main className="workspace-main">
           {error && (

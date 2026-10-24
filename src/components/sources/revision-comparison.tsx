@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import type { SourceVersion } from "@/domain/contracts";
 import { revisionRows } from "@/domain/sources/passage-change";
+import { Arrow } from "../icons";
 
 type Reference = {
   versionId: string;
@@ -72,7 +73,7 @@ export function RevisionComparison({
                       <Link
                         href={`/app/sources/${version.sourceId}?version=${version.id}&start=${line.start}&end=${line.start + line.text.length}`}
                       >
-                        Open passage · v{version.number} ↗
+                        Open passage · v{version.number} <Arrow />
                       </Link>
                       {references
                         .filter(
@@ -87,14 +88,14 @@ export function RevisionComparison({
                               key={`${reference.href}:${reference.start}`}
                               href={reference.href}
                             >
-                              {reference.label} ↗
+                              {reference.label} <Arrow />
                             </a>
                           ) : (
                             <Link
                               key={`${reference.href}:${reference.start}`}
                               href={reference.href}
                             >
-                              {reference.label} ↗
+                              {reference.label} <Arrow />
                             </Link>
                           ),
                         )}

@@ -72,7 +72,7 @@ test("a later revision flags the cited task and does not change it", async ({
   ).toContainText("Monday");
   await expect(
     comparison.getByRole("link", {
-      name: "Review flag: Confirm the supplier ↗",
+      name: "Review flag: Confirm the supplier",
     }),
   ).toBeVisible();
   await page.goto(`/app/changes/${seed.changeSetId}`);
@@ -90,7 +90,7 @@ test("a later revision flags the cited task and does not change it", async ({
     fullPage: true,
   });
   const related = page.getByRole("link", {
-    name: "Related proposal: Supplier confirmation now uses Monday. ↗",
+    name: "Related proposal: Supplier confirmation now uses Monday.",
   });
   await related.focus();
   await related.press("Enter");
