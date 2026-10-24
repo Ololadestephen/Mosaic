@@ -1,0 +1,83 @@
+name: TestSprite API against production
+
+# Runs the reviewed TestSprite API tests in tests/testsprite-api/ against the public production deployment after each
+# change to main reaches it, nightly, and on demand. The tests send no credentials and create no accounts.
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# The cloud tests' stored code is shared by every run: one run at a time, none cancelled half-way.
+concurrency:
+  group: testsprite-api
+  cancel-in-progress: false
+
+jobs:
+  api:
+    name: TestSprite API (production)
+    if: vars.TESTSPRITE_API_TESTS != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PRODUCTION_ORIGIN: https://mosaic-chi-one.vercel.app
+      SHA: ${{ github.sha }}
+      TESTSPRITE_API_TESTS: ${{ vars.TESTSPRITE_API_TESTS }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Wait for production to serve this commit
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            commit="$(curl -fsS "${PRODUCTION_ORIGIN}/api/health" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("commit",""))' 2>/dev/null || true)"
+            if [ "$commit" = "$SHA" ]; then
+              echo "Production serves $SHA"
+              exit 0
+            fi
+            echo "Waiting for production ($attempt/60): ${commit:-unavailable}"
+            sleep 10
+          done
+          echo "Production did not reach $SHA" >&2
+          exit 1
+
+      - name: Prepare TestSprite CLI
+        env:
+          TESTSPRITE_API_KEY: ${{ secrets.TESTSPRITE_API_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$HOME/.testsprite"
+          chmod 700 "$HOME/.testsprite"
+          printf '[default]\napi_key = %s\napi_url = https://api.testsprite.com\n' "$TESTSPRITE_API_KEY" > "$HOME/.testsprite/credentials"
+          chmod 600 "$HOME/.testsprite/credentials"
+
+      - name: Run reviewed API tests
+        run: |
+          set -uo pipefail
+          not_before="$(date -u -d '-60 seconds' +%Y-%m-%dT%H:%M:%SZ)"
+          status=0
+          python3 scripts/testsprite/api-suite.py "$SHA" "$not_before" . || status=1
+          commit="$(curl -fsS "${PRODUCTION_ORIGIN}/api/health" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("commit",""))' 2>/dev/null || true)"
+          if [ "$commit" != "$SHA" ]; then
+            echo "Production changed during the run: ${commit:-unavailable}" >&2
+            status=1
+          fi
+          exit $status
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testsprite-api-${{ github.sha }}-${{ github.run_attempt }}
+          path: testsprite-api-summary.json
+          if-no-files-found: ignore
