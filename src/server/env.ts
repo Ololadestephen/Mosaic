@@ -19,13 +19,19 @@ const environment = z.object({
     .default("")
     .transform((value) => (value ? value.split(",") : []))
     .pipe(z.array(z.uuid())),
-  AI_ACCOUNT_TOTAL_CALL_LIMIT: z.coerce.number().int().min(1).max(2).default(1),
-  // Separate new hosted authorization; never replaces the exhausted diagnostic cap.
+  AI_ACCOUNT_TOTAL_CALL_LIMIT: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(10)
+    .default(1),
+  // Separate new hosted authorization; never replaces the exhausted diagnostic cap. The ceiling stays far below the
+  // free tier's 500 requests per day for the allowlisted model.
   GEMINI_HOSTED_ATTEMPT_LIMIT: z.coerce
     .number()
     .int()
     .min(0)
-    .max(10)
+    .max(100)
     .default(0),
   AI_PROVIDER: z.enum(["gemini", "openrouter"]).default("gemini"),
   GEMINI_API_KEY: z.string().default(""),
@@ -46,7 +52,7 @@ const environment = z.object({
     .number()
     .int()
     .min(1)
-    .max(13)
+    .max(100)
     .default(10),
   OPENROUTER_API_KEY: z.string().default(""),
   OPENROUTER_MODEL: z.string().max(100).default(""),

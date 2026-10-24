@@ -14,6 +14,7 @@ import {
 } from "./auth/accounts";
 import { env } from "./env";
 import { workspaceRoute } from "./http/workspace-routes";
+import { enterLobby, lobbySeats, seatCookie } from "./auth/lobby";
 import { readBody } from "./http/body";
 
 export async function handleRequest(
@@ -39,25 +40,48 @@ export async function handleRequest(
         return response;
       }
       requireCondition(
-        ["register", "login", "link"].includes(path[1]),
+        ["register", "login", "link", "lobby", "lobby-seats"].includes(path[1]),
         "NOT_FOUND",
         "Route not found.",
       );
       const body = await readBody(request);
+      // On Vercel x-real-ip equals x-forwarded-for, which the platform overwrites with the connecting client's IP.
+      const client = request.headers.get("x-real-ip") ?? "unknown";
+      const resume = cookieJar.get(seatCookie)?.value;
+      if (path[1] === "lobby-seats")
+        return NextResponse.json(await lobbySeats(body, client, resume), {
+          headers: { "Cache-Control": "no-store" },
+        });
+      const cookie = {
+        httpOnly: true,
+        sameSite: "strict" as const,
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+      };
+      if (path[1] === "lobby") {
+        const entered = await enterLobby(body, client, resume);
+        const response = NextResponse.json({
+          ...entered.account,
+          seat: entered.seat,
+        });
+        response.cookies.set(sessionCookie, entered.token, {
+          ...cookie,
+          expires: entered.expiresAt,
+        });
+        if (entered.resume)
+          response.cookies.set(seatCookie, entered.resume, {
+            ...cookie,
+            expires: entered.expiresAt,
+          });
+        return response;
+      }
       const result =
         path[1] === "link"
-          ? await signInWithLink(
-              body,
-              // On Vercel x-real-ip equals x-forwarded-for, which the platform overwrites with the connecting client's IP.
-              request.headers.get("x-real-ip") ?? "unknown",
-            )
+          ? await signInWithLink(body, client)
           : await signIn(body, path[1] === "register");
       const response = NextResponse.json(result.account);
       response.cookies.set(sessionCookie, result.token, {
-        httpOnly: true,
-        sameSite: "strict",
-        secure: process.env.NODE_ENV === "production",
-        path: "/",
+        ...cookie,
         maxAge: 7 * 24 * 60 * 60,
       });
       return response;
