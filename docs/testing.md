@@ -41,6 +41,8 @@ A TestSprite portal trigger watches for the Vercel preview deployment to complet
 
 They need no account and no fixture, and change no workspace data, so they can run on every PR. They are a smoke test; the strict suite carries the lifecycle assertions.
 
+These checks run against the branch's preview address and do not themselves confirm which commit it serves. If a newer push lands while they run, they may test that newer deployment. The strict suite is the one that pins and verifies the exact PR commit.
+
 Earlier, the App also ran three fixture-backed native UI tests on PR #1 ([report](https://github.com/Ololadestephen/Mosaic/pull/1#issuecomment-6376524604)). Their step logs omitted some planned refreshes and intermediate assertions, so they are treated as narrower evidence than the strict suite. The disabled-by-default `testsprite-app-ui.yml` workflow can prepare a fresh fixture and exact plans for those tests on any open PR from the provisioned branch.
 
 ### Production API
