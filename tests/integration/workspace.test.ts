@@ -232,27 +232,76 @@ describe("real PostgreSQL authentication time boundaries", () => {
     expect(await resolveSession(owner.token)).toBeNull();
     expect((await resolveSession(other.token))?.id).toBe(other.actor.userId);
   });
-  it("permits attempt fifteen, rejects sixteen without a session and resets an elapsed window", async () => {
+  it("does not count successful sign-ins, even in a parallel burst", async () => {
     const owner = await account();
     const key = digest(`signin:${owner.account.email}`);
-    await db()`UPDATE rate_limits SET attempts = 14 WHERE key = ${key}`;
     const input = {
       email: owner.account.email,
       password: "local-test-password-only",
     };
-    await expect(signIn(input, false)).resolves.toHaveProperty("token");
+    const [before] =
+      await db()`SELECT attempts FROM rate_limits WHERE key = ${key}`;
+    for (let i = 0; i < 20; i++)
+      await expect(signIn(input, false)).resolves.toHaveProperty("token");
+    const burst = await Promise.all(
+      Array.from({ length: 20 }, () => signIn(input, false)),
+    );
+    expect(burst.every((session) => session.token)).toBe(true);
+    const [after] =
+      await db()`SELECT attempts FROM rate_limits WHERE key = ${key}`;
+    expect(after.attempts).toBe(before.attempts);
+  });
+  it("allows fifteen failures, then refuses even the right password without a session until the window elapses", async () => {
+    const owner = await account();
+    const key = digest(`signin:${owner.account.email}`);
+    const right = {
+      email: owner.account.email,
+      password: "local-test-password-only",
+    };
+    const wrong = { ...right, password: "not-the-right-password" };
+    await db()`UPDATE rate_limits SET attempts = 14 WHERE key = ${key}`;
+    await expect(signIn(wrong, false)).rejects.toMatchObject({
+      code: "UNAUTHENTICATED",
+    });
     const [before] =
       await db()`SELECT count(*)::int AS count FROM sessions WHERE user_id = ${owner.actor.userId}`;
-    await expect(signIn(input, false)).rejects.toMatchObject({
+    await expect(signIn(right, false)).rejects.toMatchObject({
+      code: "RATE_LIMITED",
+    });
+    await expect(signIn(wrong, false)).rejects.toMatchObject({
       code: "RATE_LIMITED",
     });
     const [after] =
       await db()`SELECT count(*)::int AS count FROM sessions WHERE user_id = ${owner.actor.userId}`;
     expect(after.count).toBe(before.count);
     await db()`UPDATE rate_limits SET window_start = now() - interval '16 minutes' WHERE key = ${key}`;
-    await expect(signIn(input, false)).resolves.toHaveProperty("token");
+    await expect(signIn(right, false)).resolves.toHaveProperty("token");
+    await expect(signIn(wrong, false)).rejects.toMatchObject({
+      code: "UNAUTHENTICATED",
+    });
     const [limit] =
       await db()`SELECT attempts FROM rate_limits WHERE key = ${key}`;
     expect(limit.attempts).toBe(1);
+  });
+  it("never lets a parallel burst of failures exceed the limit", async () => {
+    const owner = await account();
+    const wrong = {
+      email: owner.account.email,
+      password: "not-the-right-password",
+    };
+    const results = await Promise.allSettled(
+      Array.from({ length: 25 }, () => signIn(wrong, false)),
+    );
+    const codes = results.map((result) =>
+      result.status === "rejected" ? result.reason.code : "SIGNED_IN",
+    );
+    expect(codes).not.toContain("SIGNED_IN");
+    // Registration used one attempt, so at most fourteen failures are reported as wrong passwords.
+    expect(
+      codes.filter((code) => code === "UNAUTHENTICATED").length,
+    ).toBeLessThanOrEqual(14);
+    expect(
+      codes.filter((code) => code === "RATE_LIMITED").length,
+    ).toBeGreaterThanOrEqual(11);
   });
 });

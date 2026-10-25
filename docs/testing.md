@@ -31,7 +31,9 @@ This suite has caught real bugs: the analyze guard failed on the pre-fix commit 
 
 ### GitHub App status on every PR
 
-A TestSprite portal trigger watches for the Vercel preview deployment to complete, then runs the 15 read-only checks in `scripts/testsprite/pr-smoke-plans.jsonl` against that preview and posts the `TestSprite V3` status and a report comment on the PR. The checks cover:
+A TestSprite portal trigger watches for the Vercel preview deployment to complete, then runs the 31 checks in `scripts/testsprite/pr-smoke-plans.jsonl` against that preview and posts the `TestSprite V3` status and a report comment on the PR. A failing check blocks the merge.
+
+15 checks need no account:
 
 - the landing page, its review preview and navigation
 - sign-in, including rejection of unknown credentials, with no way to register
@@ -39,7 +41,17 @@ A TestSprite portal trigger watches for the Vercel preview deployment to complet
 - the judge lobby and access-link pages refusing missing or made-up links and removing them from the address bar
 - the not-found page
 
-They need no account and no fixture, and change no workspace data, so they can run on every PR. They are a smoke test; the strict suite carries the lifecycle assertions.
+16 checks sign in as a dedicated synthetic account that exists only in the preview database. It is an editor in "App smoke · editable" and a viewer in "App smoke · read-only", which holds a labelled fixture proposal. They cover:
+
+- signing in and out, the board, filtering and task detail with history
+- creating a task and changing its status, each surviving a refresh
+- the source list, revision comparison, passage links and adding a revision
+- the cited fixture proposal, and a viewer being unable to apply it or edit the board
+- the Activity and Members pages, and the preview never running live AI
+
+Write checks only create uniquely named items in the editable workspace; nothing applies or undoes a proposal, which the strict suite covers with fresh fixtures.
+
+These checks have caught two real bugs: the lobby left its private link in the address bar ([PR #14](https://github.com/Ololadestephen/Mosaic/pull/14) went red, then green after the fix), and re-selecting the open workspace left the page stuck on "Opening your workspace…". They also showed that successful sign-ins counted towards the sign-in limit, which is now counted on failures only.
 
 These checks run against the branch's preview address and do not themselves confirm which commit it serves. If a newer push lands while they run, they may test that newer deployment. The strict suite is the one that pins and verifies the exact PR commit.
 

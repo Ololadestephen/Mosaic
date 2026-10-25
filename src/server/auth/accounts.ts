@@ -11,6 +11,9 @@ export const digest = (value: string) =>
   createHash("sha256").update(value).digest("hex");
 export type Account = { id: string; email: string; name: string };
 
+const attemptLimit = 15;
+const tooManyAttempts = "Too many sign-in attempts. Try again in 15 minutes.";
+
 export async function rateLimit(key: string) {
   const [row] = await db()<{ attempts: number }[]>`
     INSERT INTO rate_limits (key) VALUES (${digest(key)})
@@ -19,9 +22,22 @@ export async function rateLimit(key: string) {
       window_start = CASE WHEN rate_limits.window_start < now() - interval '15 minutes' THEN now() ELSE rate_limits.window_start END
     RETURNING attempts`;
   requireCondition(
-    row.attempts <= 15,
+    row.attempts <= attemptLimit,
     "RATE_LIMITED",
-    "Too many sign-in attempts. Try again in 15 minutes.",
+    tooManyAttempts,
+  );
+}
+
+// Sign-in counts only failed attempts per email, so someone (or a parallel test suite) signing in repeatedly is never
+// locked out. Once failures fill the window, even the correct password is refused until the window elapses.
+async function refuseLockedSignIn(key: string) {
+  const [row] = await db()<{ attempts: number }[]>`
+    SELECT attempts FROM rate_limits
+    WHERE key = ${digest(key)} AND window_start >= now() - interval '15 minutes'`;
+  requireCondition(
+    !row || row.attempts < attemptLimit,
+    "RATE_LIMITED",
+    tooManyAttempts,
   );
 }
 
@@ -30,9 +46,10 @@ export async function signIn(
   register: boolean,
 ): Promise<{ account: Account; token: string }> {
   const input = credentials.parse(raw);
-  await rateLimit(`signin:${input.email}`);
+  const limitKey = `signin:${input.email}`;
   let account: Account;
   if (register) {
+    await rateLimit(limitKey);
     requireCondition(
       registrationOpen(),
       "FORBIDDEN",
@@ -50,6 +67,7 @@ export async function signIn(
     );
     account = created;
   } else {
+    await refuseLockedSignIn(limitKey);
     const [found] = await db()<
       (Account & { password_hash: string })[]
     >`SELECT id, email, name, password_hash FROM users WHERE email = ${input.email}`;
@@ -60,11 +78,13 @@ export async function signIn(
       input.password,
       found?.password_hash ?? fallback,
     );
-    if (!found || !valid)
+    if (!found || !valid) {
+      await rateLimit(limitKey);
       throw new DomainError(
         "UNAUTHENTICATED",
         "Email or password is incorrect.",
       );
+    }
     account = { id: found.id, email: found.email, name: found.name };
   }
   return startSession(account);
