@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "@/domain/zod";
 import { proposalItem } from "@/domain/contracts";
 
 const idValue = z.string().min(1);

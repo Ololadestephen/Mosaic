@@ -1,5 +1,5 @@
 import "server-only";
-import { z } from "zod";
+import { z } from "@/domain/zod";
 import { geminiTransportOutput } from "./gemini-citations";
 import { DomainError, requireCondition } from "@/domain/errors";
 import { env } from "../env";

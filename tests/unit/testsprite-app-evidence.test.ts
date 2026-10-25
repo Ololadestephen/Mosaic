@@ -669,3 +669,47 @@ describe("optional native check fails closed without paid execution", () => {
     },
   );
 });
+
+describe("native verification rechecks the prepared PR, not a fixed number", () => {
+  const step = workflow
+    .split("      - name: Verify preview and current PR still match\n")[1]
+    .split("      - name:")[0];
+  const shell = step.split("        run: |\n")[1];
+  function verify(pr: string, livePr: string) {
+    const bin = mkdtempSync(join(tmpdir(), "mosaic-verify-"));
+    try {
+      // gh reports the live head only for the PR it is asked about; curl reports the preview commit.
+      writeFileSync(
+        join(bin, "gh"),
+        `#!/bin/sh\ncase "$2" in */pulls/${livePr}) echo ${sha};; *) echo ${"b".repeat(40)};; esac\n`,
+        { mode: 0o755 },
+      );
+      writeFileSync(
+        join(bin, "curl"),
+        `#!/bin/sh\necho '{"commit":"${sha}"}'\n`,
+        { mode: 0o755 },
+      );
+      return spawnSync("bash", ["-euo", "pipefail", "-c", shell], {
+        encoding: "utf8",
+        env: {
+          NODE_ENV: "test",
+          PATH: `${bin}:/usr/bin:/bin`,
+          PR: pr,
+          SHA: sha,
+          PREVIEW_ORIGIN: "https://preview.example",
+          BYPASS: "test",
+        },
+      }).status;
+    } finally {
+      rmSync(bin, { recursive: true, force: true });
+    }
+  }
+  it("uses the PR number from preparation", () => {
+    expect(step).toContain("PR: ${{ needs.prepare.outputs.pr }}");
+    expect(step).not.toContain("pulls/1 ");
+    expect(verify("8", "8")).toBe(0);
+    expect(verify("8", "1")).not.toBe(0);
+    expect(verify("", "1")).not.toBe(0);
+    expect(verify("1; true", "1")).not.toBe(0);
+  });
+});

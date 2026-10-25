@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "@/domain/zod";
 
 export const id = z.uuid();
 const role = z.enum(["owner", "editor", "viewer"]);

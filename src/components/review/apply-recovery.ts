@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "@/domain/zod";
 import { applyInput } from "@/domain/contracts";
 
 export type ApplyAttempt = z.infer<typeof applyInput>;
