@@ -85,7 +85,7 @@ npm run build && npm run check:package
 | Integration                             | Real PostgreSQL: locking, permissions, idempotency, rollback, the production runtime role's privileges | Every PR                            |
 | Browser                                 | Full lifecycle with labelled fixtures: review → apply → refresh → undo with a conflict                 | Every PR                            |
 | TestSprite strict suite (required)      | Four pinned scripts against the exact PR preview, including the stateful apply/undo fixture            | Every PR, blocks merge              |
-| TestSprite GitHub App (`TestSprite V3`) | 14 read-only checks of the public pages and access boundaries (not pinned to a commit)                 | Every PR preview deployment         |
+| TestSprite GitHub App (`TestSprite V3`) | 15 read-only checks of the public pages and access boundaries (not pinned to a commit)                 | Every PR preview deployment         |
 | TestSprite API                          | Health and headers, origin guard, signed-out rejection, sign-in validation and rate limits             | Production, every merge and nightly |
 
 `main` is protected: the four required checks must pass and admins cannot bypass them. The [testing guide](docs/testing.md) explains how each suite proves it ran the reviewed code against the right commit.

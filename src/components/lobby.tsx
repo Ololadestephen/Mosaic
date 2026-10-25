@@ -7,7 +7,27 @@ import { enterLobby, lobbySeats } from "@/client/commands";
 
 type Seats = Awaited<ReturnType<typeof lobbySeats>>["seats"];
 
-// The shared lobby token stays in the URL fragment, so it is kept out of request URLs and the link can be reopened.
+// The shared lobby token arrives in the URL fragment, so it never reaches request URLs. The page then removes it
+// from the address bar and history, keeping it in this tab's session storage so a refresh before choosing a seat works.
+const storedLink = "mosaic:lobby-link";
+
+function readStored() {
+  try {
+    return window.sessionStorage.getItem(storedLink) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function writeStored(value: string | null) {
+  try {
+    if (value) window.sessionStorage.setItem(storedLink, value);
+    else window.sessionStorage.removeItem(storedLink);
+  } catch {
+    // Without session storage the token lives in memory only; a refresh then needs the link again.
+  }
+}
+
 export function Lobby() {
   const router = useRouter();
   const token = useRef("");
@@ -21,6 +41,8 @@ export function Lobby() {
       setError("");
       try {
         await enterLobby(token.current, seat);
+        // The seat cookie returns this judge from now on.
+        writeStored(null);
         router.replace("/app");
       } catch (error) {
         setError(
@@ -39,7 +61,12 @@ export function Lobby() {
   useEffect(() => {
     if (started.current) return;
     started.current = true;
-    token.current = window.location.hash.slice(1);
+    const fromLink = window.location.hash.slice(1);
+    if (fromLink) {
+      writeStored(fromLink);
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+    token.current = fromLink || readStored();
     lobbySeats(token.current)
       .then((result) => (result.yours ? enter() : setSeats(result.seats)))
       .catch((error) =>
