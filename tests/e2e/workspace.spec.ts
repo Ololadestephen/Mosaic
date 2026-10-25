@@ -261,3 +261,19 @@ test("a failed workspace switch never renders the previous workspace's work", as
     page.getByRole("heading", { name: "No tasks yet", exact: true }),
   ).toBeVisible();
 });
+
+test("re-selecting the open workspace keeps the board", async ({ page }) => {
+  const seed = await seedWorkspace();
+  await signInFixture(page, seed);
+  const task = page.getByRole("link", {
+    name: "Prepare the fictional launch",
+    exact: true,
+  });
+  await expect(task).toBeVisible();
+  const picker = page.getByRole("combobox", { name: "Active workspace" });
+  await picker.selectOption(await picker.inputValue());
+  await expect(page.getByText("Opening your workspace…")).toHaveCount(0);
+  await expect(task).toBeVisible();
+  await task.click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+});

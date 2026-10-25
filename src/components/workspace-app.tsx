@@ -112,6 +112,9 @@ export function WorkspaceApp({
             aria-label="Active workspace"
             value={workspaceId}
             onChange={(event) => {
+              // Re-selecting the open workspace changes no state, so nothing would load and the page would stay on
+              // "Opening your workspace…". Automation can fire change for the same option.
+              if (event.target.value === workspaceId) return;
               setLoading(true);
               setError("");
               activeWorkspace.current = event.target.value;
