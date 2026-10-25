@@ -6,6 +6,8 @@
 [![TestSprite PR preview](https://github.com/Ololadestephen/Mosaic/actions/workflows/testsprite-pr.yml/badge.svg)](https://github.com/Ololadestephen/Mosaic/actions/workflows/testsprite-pr.yml)
 [![TestSprite API](https://github.com/Ololadestephen/Mosaic/actions/workflows/testsprite-api.yml/badge.svg)](https://github.com/Ololadestephen/Mosaic/actions/workflows/testsprite-api.yml)
 
+`31 TestSprite App checks on every PR` · `4 pinned strict TestSprite cases (required)` · `4 TestSprite API tests against production` · `179 unit` · `73 PostgreSQL` · `23 browser`
+
 [Live app](https://trymosaic.vercel.app) · [How it works](#how-it-works) · [Testing](docs/testing.md) · [AI and limits](docs/ai.md) · [Operations](docs/operations.md)
 
 ![Mosaic landing page](docs/images/landing.png)
@@ -79,14 +81,14 @@ npm run test:e2e      # browser tests on a separate local server and test databa
 npm run build && npm run check:package
 ```
 
-| Layer                                   | What it covers                                                                                         | Where it runs                       |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------- |
-| Unit                                    | Contracts, citation and proposal validation, prompts, provider failure handling (mocked HTTP)          | Every PR                            |
-| Integration                             | Real PostgreSQL: locking, permissions, idempotency, rollback, the production runtime role's privileges | Every PR                            |
-| Browser                                 | Full lifecycle with labelled fixtures: review → apply → refresh → undo with a conflict                 | Every PR                            |
-| TestSprite strict suite (required)      | Four pinned scripts against the exact PR preview, including the stateful apply/undo fixture            | Every PR, blocks merge              |
-| TestSprite GitHub App (`TestSprite V3`) | 15 read-only checks of the public pages and access boundaries (not pinned to a commit)                 | Every PR preview deployment         |
-| TestSprite API                          | Health and headers, origin guard, signed-out rejection, sign-in validation and rate limits             | Production, every merge and nightly |
+| Layer                                   | What it covers                                                                                                                  | Where it runs                       |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| Unit                                    | Contracts, citation and proposal validation, prompts, provider failure handling (mocked HTTP)                                   | Every PR                            |
+| Integration                             | Real PostgreSQL: locking, permissions, idempotency, rollback, the production runtime role's privileges                          | Every PR                            |
+| Browser                                 | Full lifecycle with labelled fixtures: review → apply → refresh → undo with a conflict                                          | Every PR                            |
+| TestSprite strict suite (required)      | Four pinned scripts against the exact PR preview, including the stateful apply/undo fixture                                     | Every PR, blocks merge              |
+| TestSprite GitHub App (`TestSprite V3`) | 31 checks: public pages and access boundaries, plus signed-in board, sources, review and viewer limits (not pinned to a commit) | Every PR preview deployment         |
+| TestSprite API                          | Health and headers, origin guard, signed-out rejection, sign-in validation and rate limits                                      | Production, every merge and nightly |
 
 `main` is protected: the four required checks must pass and admins cannot bypass them. The [testing guide](docs/testing.md) explains how each suite proves it ran the reviewed code against the right commit.
 

@@ -14,7 +14,7 @@ Individual access links work the same way for a single account. Links are delive
 
 ## Configuration
 
-`APP_ORIGIN` must match the browser origin exactly; every state-changing request must come from it. Sessions are HttpOnly, SameSite cookies and require HTTPS in production. Passwords use salted scrypt hashes.
+`APP_ORIGIN` must match the browser origin exactly; every state-changing request must come from it. Sessions are HttpOnly, SameSite cookies and require HTTPS in production. Passwords use salted scrypt hashes. Sign-in allows 15 failed attempts per email in 15 minutes; after that even the correct password is refused until the window passes. Successful sign-ins do not count.
 
 Set `ALLOW_REGISTRATION=false` in protected hosting settings. Previews always enforce closed registration, derive their origin from `VERCEL_URL` when `APP_ORIGIN` is unset, and refuse to start with live AI credentials.
 
