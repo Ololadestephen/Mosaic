@@ -31,12 +31,12 @@ This suite has caught real bugs: the analyze guard failed on the pre-fix commit 
 
 ### GitHub App status on every PR
 
-A TestSprite portal trigger watches for the Vercel preview deployment to complete, then runs the 14 read-only checks in `scripts/testsprite/pr-smoke-plans.jsonl` against that preview and posts the `TestSprite V3` status and a report comment on the PR. The checks cover:
+A TestSprite portal trigger watches for the Vercel preview deployment to complete, then runs the 15 read-only checks in `scripts/testsprite/pr-smoke-plans.jsonl` against that preview and posts the `TestSprite V3` status and a report comment on the PR. The checks cover:
 
 - the landing page, its review preview and navigation
 - sign-in, including rejection of unknown credentials, with no way to register
 - signed-out redirects from the workspace pages
-- the judge lobby and access-link pages refusing missing or made-up links
+- the judge lobby and access-link pages refusing missing or made-up links and removing them from the address bar
 - the not-found page
 
 They need no account and no fixture, and change no workspace data, so they can run on every PR. They are a smoke test; the strict suite carries the lifecycle assertions.

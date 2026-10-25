@@ -5,7 +5,7 @@
 Registration is closed in production. Judges share one private lobby link that shows numbered seats; choosing an available seat signs them into that seat's own synthetic workspaces without a password.
 
 - **Seats are exclusive.** Claims are atomic, so two judges never receive the same seat. An HttpOnly seat cookie returns a judge to their seat after signing out, and nobody else can claim it.
-- **Tokens stay out of logs.** The token sits in the URL fragment, so it never appears in request URLs. The page exchanges it once, in an HTTPS request body, for an ordinary session and removes it from the address bar.
+- **Tokens stay out of logs.** The token sits in the URL fragment, so it never appears in request URLs. The page removes it from the address bar and history straight away, and exchanges it once, in an HTTPS request body, for an ordinary session. Until a seat is chosen, the lobby keeps it in that tab's session storage so a refresh still works, then clears it.
 - **Only hashes are stored.** Link hashes live in a separate namespace from sessions, so a link cannot act as a session or the reverse. A session started from a link ends no later than the link.
 - **Attempts are rate limited** per client IP, and the 256-bit token makes guessing impractical.
 - **Operators** can release an abandoned seat, revoke a seat or close the lobby with `scripts/access-link.ts`. Entry, release, revocation and closing are serialized with transaction-scoped advisory locks, so a revoked or closed seat never keeps a session created at the same moment. Releasing a seat ends its sessions but keeps its workspaces and analyses used.

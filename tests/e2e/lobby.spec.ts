@@ -66,3 +66,39 @@ test("an unknown lobby link is refused", async ({ page }) => {
     "This lobby link is invalid or has expired.",
   );
 });
+
+test("the lobby removes its link from the address bar and survives a refresh", async ({
+  browser,
+}) => {
+  const { token } = await seedLobby();
+  const judge = await browser.newContext({
+    extraHTTPHeaders: { "x-real-ip": randomUUID() },
+  });
+  const page = await judge.newPage();
+  await page.goto(`/lobby#${token}`);
+  await expect(page.getByRole("button", { name: /Seat 2/ })).toBeEnabled();
+  expect(page.url()).not.toContain("#");
+  expect(page.url()).not.toContain(token);
+  await page.reload();
+  await expect(page.getByRole("button", { name: /Seat 2/ })).toBeEnabled();
+  expect(page.url()).not.toContain(token);
+  await page.getByRole("button", { name: /Seat 2/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "A clear view of what’s next." }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(() => sessionStorage.getItem("mosaic:lobby-link")),
+  ).toBeNull();
+  await judge.close();
+});
+
+test("a made-up lobby link is also removed from the address bar", async ({
+  page,
+}) => {
+  await page.setExtraHTTPHeaders({ "x-real-ip": randomUUID() });
+  await page.goto("/lobby#not-a-real-link");
+  await expect(page.locator("p.error[role=alert]")).toHaveText(
+    "This lobby link is invalid or has expired.",
+  );
+  expect(page.url()).not.toContain("not-a-real-link");
+});
