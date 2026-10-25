@@ -1,5 +1,5 @@
 import "server-only";
-import { z } from "zod";
+import { z } from "@/domain/zod";
 import { analysisOutput } from "@/domain/contracts";
 import { DomainError, requireCondition } from "@/domain/errors";
 import type { AnalysisContext } from "../reconciliation";

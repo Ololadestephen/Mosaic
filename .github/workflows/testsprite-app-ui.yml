@@ -219,9 +219,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          PR: ${{ needs.prepare.outputs.pr }}
         run: |
           set -euo pipefail
-          current="$(gh api repos/Ololadestephen/Mosaic/pulls/1 --jq .head.sha)"
+          [[ "$PR" =~ ^[1-9][0-9]{0,5}$ ]]
+          current="$(gh api "repos/Ololadestephen/Mosaic/pulls/${PR}" --jq .head.sha)"
           commit="$(curl -fsS -H "x-vercel-protection-bypass: ${BYPASS}" "${PREVIEW_ORIGIN}/api/health" | python3 -c 'import json,sys; print(json.load(sys.stdin)["commit"])')"
           test "$current" = "$SHA" && test "$commit" = "$SHA"
       - name: Upload sanitized verification summaries only

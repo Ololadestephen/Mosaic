@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "@/domain/zod";
 
 export class ApiError extends Error {
   constructor(

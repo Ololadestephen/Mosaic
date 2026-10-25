@@ -1,5 +1,5 @@
 import "server-only";
-import { z } from "zod";
+import { z } from "@/domain/zod";
 import { DomainError } from "@/domain/errors";
 
 const environment = z.object({

@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "@/domain/zod";
 import type { BatchResult } from "@/domain/api";
 import {
   batchResult,

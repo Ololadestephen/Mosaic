@@ -1,5 +1,18 @@
 import type { NextConfig } from "next";
 
+// Only the development server needs eval (React debugging) and websockets (hot reload).
+const development = process.env.NODE_ENV === "development";
+const contentSecurityPolicy = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline'${development ? " 'unsafe-eval'" : ""}`,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data:",
+  `connect-src 'self'${development ? " ws:" : ""}`,
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join("; ");
+
 const config: NextConfig = {
   poweredByHeader: false,
   agentRules: false,
@@ -37,8 +50,7 @@ const config: NextConfig = {
           },
           {
             key: "Content-Security-Policy",
-            value:
-              "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ws:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+            value: contentSecurityPolicy,
           },
         ],
       },

@@ -1,6 +1,6 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
-import { z } from "zod";
+import { z } from "@/domain/zod";
 import { DomainError, requireCondition } from "@/domain/errors";
 import { db, type Transaction } from "../db/client";
 import {

@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { z } from "zod";
+import { z } from "@/domain/zod";
 import { id, type Actor } from "@/domain/contracts";
 import { DomainError, requireCondition } from "@/domain/errors";
 import { inWorkspace } from "../auth/authorization";
