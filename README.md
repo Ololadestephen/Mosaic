@@ -72,14 +72,19 @@ Open http://localhost:3000, create an account and a workspace, and use **Bring a
 
 Copy variable names from `.env.example` and put values only in local env files or hosting secrets. Live analysis is off unless you configure a provider; see [AI and limits](docs/ai.md).
 
-## Testing
+## What the test suite covers
 
-```sh
-npm run format:check && npm run lint && npm run typecheck
-npm test              # unit + integration (start npm run local:db first)
-npm run test:e2e      # browser tests on a separate local server and test database
-npm run build && npm run check:package
-```
+Every pull request runs the whole suite before it can merge, and production is tested after every merge and nightly.
+
+- **Sign-in and access:** unknown credentials are refused, registration stays closed, repeated failed sign-ins lock sign-in for up to 15 minutes, signed-out visitors are sent to sign-in, and judge lobby and access links are refused when made up and removed from the address bar.
+- **Permissions and isolation:** each workspace sees only its own work, viewers cannot edit tasks or apply proposals, and every state-changing request must come from the app's own origin.
+- **Sources:** revisions are immutable, two versions can be compared side by side, and citation links open the exact passage.
+- **AI proposals:** every quotation must exist word for word in the selected revision, completed tasks are never changed, cancelled work is not marked done, and the preview never calls live AI.
+- **Review and apply:** only the selected changes are applied, in one step, with a before-and-after receipt that survives a refresh and a retried request.
+- **Undo:** untouched fields are restored and anything edited since is kept and reported as a conflict.
+- **Data integrity:** real PostgreSQL tests cover locking, rollback, simultaneous seat claims and the production database role's limited permissions.
+
+### By layer
 
 | Layer                                   | What it covers                                                                                                                  | Where it runs                       |
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
@@ -90,7 +95,16 @@ npm run build && npm run check:package
 | TestSprite GitHub App (`TestSprite V3`) | 31 checks: public pages and access boundaries, plus signed-in board, sources, review and viewer limits (not pinned to a commit) | Every PR preview deployment         |
 | TestSprite API                          | Health and headers, origin guard, signed-out rejection, sign-in validation and rate limits                                      | Production, every merge and nightly |
 
-`main` is protected: the four required checks must pass and admins cannot bypass them. The [testing guide](docs/testing.md) explains how each suite proves it ran the reviewed code against the right commit.
+`main` is protected: five required checks, including `TestSprite V3` and the strict TestSprite suite, must pass and admins cannot bypass them. The [testing guide](docs/testing.md) explains how each suite proves it ran the reviewed code against the right commit.
+
+### Run it locally
+
+```sh
+npm run format:check && npm run lint && npm run typecheck
+npm test              # unit + integration (start npm run local:db first)
+npm run test:e2e      # browser tests on a separate local server and test database
+npm run build && npm run check:package
+```
 
 ## Project layout
 

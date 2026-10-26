@@ -81,6 +81,14 @@
 .task-card h3 a {
   display: block;
 }
+/* The whole card opens the task: the title link stretches over it. */
+.task-card h3 a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+}
 .task-meta {
   display: flex;
   gap: 6px;

@@ -277,3 +277,17 @@ test("re-selecting the open workspace keeps the board", async ({ page }) => {
   await task.click();
   await expect(page.getByRole("dialog")).toBeVisible();
 });
+
+test("clicking anywhere on a task card opens the task", async ({ page }) => {
+  const seed = await seedWorkspace();
+  await signInFixture(page, seed);
+  const card = page
+    .getByRole("article")
+    .filter({ hasText: "Prepare the fictional launch" });
+  await expect(card).toBeVisible();
+  const box = (await card.boundingBox())!;
+  // The empty bottom-right corner, well away from the title text.
+  await card.click({ position: { x: box.width - 12, y: box.height - 8 } });
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(page).toHaveURL(/\/app\/tasks\//);
+});
