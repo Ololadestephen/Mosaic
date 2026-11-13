@@ -20,6 +20,10 @@ const make = async (name: string) =>
   ).account;
 const owner = await make("Lobby owner");
 const seats = [await make("Seat one"), await make("Seat two")];
+const old = await createWorkspace(
+  { userId: seats[0].id },
+  { name: "Earlier seat workspace" },
+);
 for (const [index, seat] of seats.entries())
   await createWorkspace(
     { userId: seat.id },
@@ -31,5 +35,5 @@ const token = await openLobby(
   seats.map((seat) => seat.id),
   new Date(Date.now() + 24 * 60 * 60 * 1000),
 );
-console.log(JSON.stringify({ token }));
+console.log(JSON.stringify({ token, oldWorkspaceId: old.id }));
 await closeDatabase();

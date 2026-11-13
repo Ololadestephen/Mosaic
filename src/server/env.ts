@@ -69,6 +69,12 @@ const environment = z.object({
   AI_OUTPUT_USD_PER_MILLION: z.coerce.number().min(0).max(1000).default(0),
 });
 
+export function publicDemoToken() {
+  if (process.env.VERCEL_ENV === "preview") return undefined;
+  const token = process.env.PUBLIC_DEMO_LOBBY_TOKEN;
+  return token && /^[A-Za-z0-9_-]{43,100}$/.test(token) ? token : undefined;
+}
+
 export function registrationOpen() {
   const parsed = z
     .enum(["true", "false"])

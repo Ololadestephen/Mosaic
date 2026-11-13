@@ -28,9 +28,9 @@ function writeStored(value: string | null) {
   }
 }
 
-export function Lobby() {
+export function Lobby({ publicDemo = false }: { publicDemo?: boolean }) {
   const router = useRouter();
-  const token = useRef("");
+  const token = useRef<string | null>(publicDemo ? null : "");
   const [seats, setSeats] = useState<Seats | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -40,10 +40,14 @@ export function Lobby() {
       setBusy(true);
       setError("");
       try {
-        await enterLobby(token.current, seat);
+        const entered = await enterLobby(token.current, seat);
         // The seat cookie returns this judge from now on.
         writeStored(null);
-        router.replace("/app");
+        router.replace(
+          entered.workspaceId
+            ? `/app?workspace=${entered.workspaceId}`
+            : "/app",
+        );
       } catch (error) {
         setError(
           error instanceof Error ? error.message : "Could not open that seat.",
@@ -61,12 +65,14 @@ export function Lobby() {
   useEffect(() => {
     if (started.current) return;
     started.current = true;
-    const fromLink = window.location.hash.slice(1);
-    if (fromLink) {
-      writeStored(fromLink);
-      window.history.replaceState(null, "", window.location.pathname);
+    if (!publicDemo) {
+      const fromLink = window.location.hash.slice(1);
+      if (fromLink) {
+        writeStored(fromLink);
+        window.history.replaceState(null, "", window.location.pathname);
+      }
+      token.current = fromLink || readStored();
     }
-    token.current = fromLink || readStored();
     lobbySeats(token.current)
       .then((result) => (result.yours ? enter() : setSeats(result.seats)))
       .catch((error) =>
@@ -76,7 +82,7 @@ export function Lobby() {
             : "This lobby link could not be used.",
         ),
       );
-  }, [enter]);
+  }, [enter, publicDemo]);
 
   return (
     <main className="auth-page">
@@ -90,7 +96,10 @@ export function Lobby() {
         Mosaic
       </Link>
       <section className="auth-card">
-        <h1>Choose a seat</h1>
+        <h1>{publicDemo ? "Open the Mosaic demo" : "Choose a seat"}</h1>
+        {publicDemo && (
+          <p>Choose an available seat to open its demo workspace.</p>
+        )}
         {error && (
           <p className="error" role="alert">
             {error}

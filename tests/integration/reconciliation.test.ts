@@ -768,3 +768,36 @@ describe("committed write with failed server readback", () => {
     ).toHaveLength(0);
   });
 });
+
+it("shows task titles and removes unknown IDs from proposal questions", async () => {
+  const { actor, workspaceId, source } = await scenario();
+  const task = await createTask(
+    actor,
+    workspaceId,
+    {
+      title: "Confirm supplier",
+      status: "todo",
+      assigneeId: null,
+      dueDate: null,
+    },
+    randomUUID(),
+  );
+  const question = `Does ${task.taskIds[0]} depend on ${randomUUID()}?`;
+  const { id } = await inWorkspace(actor, workspaceId, "write", async (tx) =>
+    saveProposal(
+      tx,
+      actor,
+      workspaceId,
+      await analysisContext(tx, actor, workspaceId, source.versionId),
+      {
+        items: [],
+        questions: [question],
+        preserved: [],
+      },
+    ),
+  );
+  const expected = ["Does “Confirm supplier” depend on an item?"];
+  expect((await getProposal(actor, workspaceId, id)).questions).toEqual(
+    expected,
+  );
+});

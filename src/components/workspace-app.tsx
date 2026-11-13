@@ -48,9 +48,20 @@ export function WorkspaceApp({
       .then((spaces) => {
         if (!active) return;
         setSpaces(spaces);
+        const requested = new URLSearchParams(window.location.search).get(
+          "workspace",
+        );
         const saved = localStorage.getItem("mosaic-workspace");
         const nextId =
-          spaces.find((space) => space.id === saved)?.id ?? spaces[0]?.id ?? "";
+          spaces.find((space) => space.id === requested)?.id ??
+          spaces.find((space) => space.id === saved)?.id ??
+          spaces[0]?.id ??
+          "";
+        if (requested) {
+          const url = new URL(window.location.href);
+          url.searchParams.delete("workspace");
+          window.history.replaceState(window.history.state, "", url);
+        }
         activeWorkspace.current = nextId;
         setWorkspaceId(nextId);
         if (!spaces.length) setLoading(false);
