@@ -2,10 +2,16 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { expect, type Page } from "@playwright/test";
 
-export async function seedWorkspace() {
+export async function seedWorkspace(mode?: "coverage") {
   const { stdout } = await promisify(execFile)(
     process.execPath,
-    ["--conditions=react-server", "--import", "tsx", "tests/e2e/seed.ts"],
+    [
+      "--conditions=react-server",
+      "--import",
+      "tsx",
+      "tests/e2e/seed.ts",
+      ...(mode ? [mode] : []),
+    ],
     { cwd: process.cwd() },
   );
   return JSON.parse(stdout) as {
@@ -13,6 +19,7 @@ export async function seedWorkspace() {
     changeSetId: string;
     taskId: string;
     sourceId: string;
+    versionId: string;
     ownerEmail: string;
     editorEmail: string;
     password: string;

@@ -122,6 +122,19 @@ export async function analyzeSource(
           "Another analysis is running. No generation was sent; try later.",
         );
       }
+      if (
+        config.SERV_COVERAGE_ATTEMPT_LIMIT > 0 &&
+        config.AI_ALLOWED_ACCOUNT_IDS.includes(actor.userId)
+      ) {
+        const [usage] = await tx<{ calls: number }[]>`
+          SELECT ((SELECT count(*) FROM analysis_runs WHERE actor_id = ${actor.userId}) +
+            (SELECT count(*) FROM serv_coverage_attempts WHERE actor_id = ${actor.userId}))::int AS calls`;
+        requireCondition(
+          usage.calls < config.AI_ACCOUNT_TOTAL_CALL_LIMIT,
+          "QUOTA_EXHAUSTED",
+          "This account's total analysis allowance is exhausted. No generation was sent.",
+        );
+      }
       const runId = randomUUID();
       await tx`INSERT INTO analysis_runs (id, workspace_id, source_version_id, actor_id, restricted_to, status, provider, validation_id, model, prompt_version, reserved_usd) VALUES (${runId}, ${workspaceId}, ${input.sourceVersionId}, ${actor.userId}, ${context.restrictedTo}, 'running', ${request.provider}, ${validationId}, ${request.model}, ${promptVersion}, ${request.reservedUsd})`;
       return { context, request, runId };

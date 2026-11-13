@@ -33,6 +33,7 @@ const runtimeGrants: Record<string, string> = {
   memberships: "SELECT, INSERT, UPDATE",
   rate_limits: "SELECT, INSERT, UPDATE",
   schema_migrations: "SELECT",
+  serv_coverage_attempts: "SELECT, INSERT, UPDATE",
   sessions: "SELECT, INSERT, DELETE",
   source_versions: "SELECT, INSERT",
   sources: "SELECT, INSERT",

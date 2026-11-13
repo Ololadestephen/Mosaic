@@ -1,3 +1,7 @@
+import {
+  coverageFingerprint,
+  coverageReview,
+} from "@/domain/sources/coverage-result";
 import { z } from "@/domain/zod";
 import type { BatchResult } from "@/domain/api";
 import {
@@ -227,4 +231,22 @@ export function enterLobby(token: string, seat?: number) {
 
 export function signOut() {
   return api("auth/logout", z.object({ ok: z.literal(true) }), "POST");
+}
+
+export function checkCoverage(workspaceId: string, changeSetId: string) {
+  return api(
+    `workspaces/${workspaceId}/changes/${changeSetId}/coverage`,
+    coverageReview,
+    "POST",
+  );
+}
+
+export function loadCoverageFingerprint(
+  workspaceId: string,
+  changeSetId: string,
+) {
+  return api(
+    `workspaces/${workspaceId}/changes/${changeSetId}/coverage`,
+    coverageFingerprint,
+  );
 }

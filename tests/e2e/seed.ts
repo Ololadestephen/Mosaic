@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { prepareDatabase } from "../integration/helpers";
 import { signIn } from "../../src/server/auth/accounts";
 import { createWorkspace, setMember } from "../../src/server/workspaces";
-import { createSource } from "../../src/server/sources";
+import { addRevision, createSource } from "../../src/server/sources";
 import { createTask } from "../../src/server/tasks";
 import { inWorkspace } from "../../src/server/auth/authorization";
 import { analysisContext, saveProposal } from "../../src/server/reconciliation";
@@ -49,10 +49,17 @@ const text =
   "FICTIONAL TEST BRIEF. Launch on 22 October 2026. Prepare the product photos by 19 October 2026. Begin launch preparation now.";
 const source = await createSource(actor, workspace.id, {
   title: "Labelled deterministic test brief",
-  text,
+  text: process.argv[2] === "coverage" ? "Earlier launch plan." : text,
 });
+const { versionId } =
+  process.argv[2] === "coverage"
+    ? await addRevision(actor, workspace.id, source.sourceId, {
+        predecessorId: source.versionId,
+        text,
+      })
+    : source;
 const citation = {
-  sourceVersionId: source.versionId,
+  sourceVersionId: versionId,
   start: 0,
   end: text.length,
   quote: text,
@@ -62,7 +69,7 @@ const proposal = await inWorkspace(actor, workspace.id, "write", async (tx) =>
     tx,
     actor,
     workspace.id,
-    await analysisContext(tx, actor, workspace.id, source.versionId),
+    await analysisContext(tx, actor, workspace.id, versionId),
     {
       items: [
         {
@@ -109,6 +116,7 @@ process.stdout.write(
     changeSetId: proposal.id,
     taskId: created.taskIds[0],
     sourceId: source.sourceId,
+    versionId,
     ownerEmail,
     editorEmail,
     password,
