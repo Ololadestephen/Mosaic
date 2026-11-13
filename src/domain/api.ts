@@ -210,6 +210,7 @@ export const proposalDetail = z.object({
   ),
   members: z.array(z.object({ id: idValue, name: z.string() })),
   receipt: z.array(fieldChange),
+  coverageAvailable: z.boolean().default(false),
   analysis: z
     .object({ provider: z.enum(["gemini", "openrouter"]), model: z.string() })
     .nullable(),

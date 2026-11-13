@@ -17,6 +17,7 @@ import { sourceVisibleTo } from "./auth/visibility";
 import { draftRecord } from "./db/records";
 import type { Transaction } from "./db/client";
 import { json } from "./journal";
+import { coverageAvailable } from "./ai/coverage-access";
 import { memberIds } from "./tasks";
 
 export type AnalysisContext = {
@@ -145,6 +146,7 @@ export async function getProposal(
       members: context.members,
       receipt: applied?.changes ?? [],
       analysis: analyses.at(0) ?? null,
+      coverageAvailable: coverageAvailable(actor),
     };
   });
 }

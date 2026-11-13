@@ -33,6 +33,13 @@ const environment = z.object({
     .min(0)
     .max(100)
     .default(0),
+  SERV_API_KEY: z.string().default(""),
+  SERV_COVERAGE_ATTEMPT_LIMIT: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(100)
+    .default(0),
   AI_PROVIDER: z.enum(["gemini", "openrouter"]).default("gemini"),
   GEMINI_API_KEY: z.string().default(""),
   GEMINI_MODEL: z
@@ -90,6 +97,7 @@ export function env() {
     (process.env.AI_ENABLED === "true" ||
       process.env.GEMINI_API_KEY ||
       process.env.OPENROUTER_API_KEY ||
+      process.env.SERV_API_KEY ||
       process.env.ALLOW_REGISTRATION === "true")
   )
     throw new DomainError(

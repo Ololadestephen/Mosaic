@@ -5,6 +5,7 @@ import { createWorkspace, listWorkspaces, setMember } from "../workspaces";
 import { createSource, getSource, addRevision } from "../sources";
 import { createTask, editTask, getTask } from "../tasks";
 import { workspaceData } from "../workspace-data";
+import { checkCoverage, currentCoverageFingerprint } from "../ai/coverage";
 import { analyzeSource } from "../ai/analyze";
 import { editProposal, getProposal } from "../reconciliation";
 import {
@@ -61,6 +62,16 @@ const commands: Command[] = [
       await readBody(request),
       request.signal,
     );
+  },
+  async (request, path, actor, workspaceId) => {
+    if (path[2] !== "changes" || path[4] !== "coverage" || path.length !== 5)
+      return unmatched();
+    const changeSetId = id.parse(path[3]);
+    if (request.method === "GET")
+      return currentCoverageFingerprint(actor, workspaceId, changeSetId);
+    if (request.method === "POST")
+      return checkCoverage(actor, workspaceId, changeSetId, request.signal);
+    notFound();
   },
   async (request, path, actor, workspaceId) => {
     if (path[2] !== "changes" || request.method !== "GET") return unmatched();

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { GlowCard } from "../glow-card";
 import type { Proposal } from "@/client/types";
 import { RevisionComparison } from "../sources/revision-comparison";
+import { CoverageReview } from "./coverage-review";
 import { ProposalGroups } from "./proposal-review";
 import { useChangeReview } from "./use-change-review";
 import { Arrow } from "../icons";
@@ -108,6 +109,16 @@ export function ChangeReview({
           )}
         />
       )}
+      {canEdit &&
+        draft.coverageAvailable &&
+        draft.state === "draft" &&
+        predecessor && (
+          <CoverageReview
+            key={draft.id + ":" + draft.revision}
+            draft={draft}
+            workspaceId={workspaceId}
+          />
+        )}
       {draft.state === "applied" && draft.receipt.length > 0 && (
         <AppliedReceipt draft={draft} cited={cited} />
       )}

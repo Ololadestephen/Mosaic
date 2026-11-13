@@ -9,7 +9,7 @@ afterEach(() => {
 });
 it("reports the build revision only when migrations are ready", async () => {
   vi.stubEnv("MOSAIC_BUILD_COMMIT", "a".repeat(40));
-  query.mockResolvedValue([{ count: 6 }]);
+  query.mockResolvedValue([{ count: 7 }]);
   const ready = await GET();
   expect(ready.status).toBe(200);
   expect(await ready.json()).toEqual({
