@@ -86,9 +86,9 @@ export default function Home() {
                 Try the walkthrough <Arrow />
               </a>
             )}
-            <a className="button quiet-button" href="#how">
-              See how it works
-            </a>
+            <Link className="button quiet-button" href={start}>
+              {startLabel}
+            </Link>
           </div>
         </div>
         <ReviewPreview />
