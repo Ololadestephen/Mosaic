@@ -40,3 +40,35 @@ test("visitors can try review and undo without signing in", async ({
   await page.goto("/app");
   await expect(page).toHaveURL(/\/login$/);
 });
+
+test("the demo shows a recorded SERV coverage result without calling anything", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const calls: string[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.pathname.startsWith("/api/") || url.hostname.includes("openserv"))
+      calls.push(request.url());
+  });
+  await page.goto("/demo");
+  await page.getByRole("link", { name: "Coverage" }).click();
+  const coverage = page.getByRole("region", {
+    name: "Check coverage with SERV",
+  });
+  await expect(coverage.getByRole("status")).toHaveText(
+    "7 changes classified · 2 uncovered",
+  );
+  await expect(
+    coverage.getByText(/Recorded result, not a live call/),
+  ).toBeVisible();
+  const first = coverage.locator(".coverage-list li").first();
+  await expect(first).toHaveAttribute("data-status", "uncovered");
+  await expect(first).toContainText("Block malicious domains.");
+  await coverage.getByText("The 8 tasks it checked against").click();
+  await expect(coverage.getByText(/not a real team’s plan/)).toBeVisible();
+  expect(calls).toEqual([]);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(390);
+});

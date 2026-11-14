@@ -410,6 +410,32 @@
   border-radius: 10px;
   background: var(--wash);
 }
+.coverage-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+}
+.coverage-list li {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--wash);
+}
+.coverage-list li[data-status="uncovered"] {
+  background: var(--surface);
+  border-left: 4px solid var(--danger);
+}
+.coverage-list li[data-status="uncovered"] > strong {
+  color: var(--danger);
+}
+.coverage-list p,
+.coverage-list blockquote {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
 .landing-faq details {
   max-width: 760px;
   padding: 16px 0;
