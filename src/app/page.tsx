@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { History, Quote, ShieldCheck } from "lucide-react";
-import { registrationOpen } from "@/server/env";
+import { publicDemoToken, registrationOpen } from "@/server/env";
 import { GlowCard } from "@/components/glow-card";
 import { Arrow } from "@/components/icons";
 import { HeroBackdrop, HeroHeadline } from "@/components/landing/hero-motion";
 import { ReviewPreview } from "@/components/landing/review-preview";
+
+import { PublicWalkthrough } from "@/components/landing/public-walkthrough";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +39,7 @@ const steps = [
 ];
 
 export default function Home() {
+  const demoAvailable = Boolean(publicDemoToken());
   const canRegister = registrationOpen();
   const start = canRegister ? "/login?mode=register" : "/login";
   const startLabel = canRegister
@@ -74,12 +77,18 @@ export default function Home() {
             approve.
           </p>
           <div className="hero-actions">
-            <Link className="button primary" href={start}>
-              {startLabel} <Arrow />
+            {demoAvailable ? (
+              <Link className="button primary" href="/demo">
+                Open demo <Arrow />
+              </Link>
+            ) : (
+              <a className="button primary" href="#walkthrough">
+                Try the walkthrough <Arrow />
+              </a>
+            )}
+            <Link className="button quiet-button" href={start}>
+              {startLabel}
             </Link>
-            <a className="button quiet-button" href="#how">
-              See how it works
-            </a>
           </div>
         </div>
         <ReviewPreview />
@@ -113,6 +122,36 @@ export default function Home() {
             </li>
           ))}
         </ol>
+      </section>
+
+      <PublicWalkthrough />
+
+      <section className="landing-faq" aria-labelledby="faq-title">
+        <h2 id="faq-title">Working in Mosaic</h2>
+        <details>
+          <summary>What happens when a source changes?</summary>
+          <p>
+            Mosaic keeps both revisions so reviewers can compare them. In
+            enabled workspaces, Check coverage classifies changed passages and
+            links them back to the source for review.
+          </p>
+        </details>
+        <details>
+          <summary>Can I try it without signing in?</summary>
+          <p>
+            Yes. The public walkthrough runs in your browser. Sign in to manage
+            real sources and tasks in your workspace.
+          </p>
+        </details>
+        <details>
+          <summary>
+            What if someone edits a task after I apply a change?
+          </summary>
+          <p>
+            Mosaic checks for later edits before undoing a change and reports
+            conflicts for you to review.
+          </p>
+        </details>
       </section>
 
       <section className="closing">

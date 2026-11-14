@@ -7,6 +7,7 @@ import {
   type Task,
   editDraftInput,
 } from "@/domain/contracts";
+import { nameTasks } from "@/domain/sources/coverage-result";
 import { requireCondition } from "@/domain/errors";
 import {
   validateAnalysis,
@@ -110,8 +111,11 @@ export async function saveProposal(
       "A task changed during analysis. Review the latest work and try again.",
     );
   }
+  const questions = output.questions.map((question) =>
+    nameTasks(question, context.tasks),
+  );
   const id = randomUUID();
-  await tx`INSERT INTO change_sets (id, workspace_id, source_version_id, created_by, restricted_to, items, questions, preserved) VALUES (${id}, ${workspaceId}, ${context.source.id}, ${actor.userId}, ${context.restrictedTo}, ${tx.json(json(output.items))}, ${tx.json(json(output.questions))}, ${tx.json(json(output.preserved))})`;
+  await tx`INSERT INTO change_sets (id, workspace_id, source_version_id, created_by, restricted_to, items, questions, preserved) VALUES (${id}, ${workspaceId}, ${context.source.id}, ${actor.userId}, ${context.restrictedTo}, ${tx.json(json(output.items))}, ${tx.json(json(questions))}, ${tx.json(json(output.preserved))})`;
   return { id };
 }
 
@@ -141,6 +145,9 @@ export async function getProposal(
     >`SELECT provider, model FROM analysis_runs WHERE workspace_id = ${workspaceId} AND source_version_id = ${draft.sourceVersionId} AND status = 'completed' ORDER BY started_at DESC LIMIT 1`;
     return {
       ...draft,
+      questions: draft.questions.map((question) =>
+        nameTasks(question, context.tasks),
+      ),
       tasks: context.tasks,
       versions: context.versions,
       members: context.members,

@@ -77,6 +77,7 @@ export async function enterLobby(
   account: Account;
   token: string;
   seat: number;
+  workspaceId: string | null;
   resume?: string;
   expiresAt: Date;
 }> {
@@ -130,7 +131,17 @@ export async function enterLobby(
       Account[]
     >`SELECT id, email, name FROM users WHERE id = ${userId}`;
     const session = await startSession(account, lobby.expires_at, tx);
-    return { ...session, seat, resume: issued, expiresAt: lobby.expires_at };
+    const [workspace] = await tx<{ id: string }[]>`
+      SELECT w.id FROM workspaces w JOIN memberships m ON m.workspace_id = w.id
+      WHERE m.user_id = ${userId} AND w.created_by = ${userId}
+      ORDER BY w.created_at DESC, w.id DESC LIMIT 1`;
+    return {
+      ...session,
+      seat,
+      workspaceId: workspace?.id ?? null,
+      resume: issued,
+      expiresAt: lobby.expires_at,
+    };
   });
 }
 

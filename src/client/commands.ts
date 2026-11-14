@@ -208,24 +208,33 @@ export function signInWithLink(token: string) {
   );
 }
 
-export function lobbySeats(token: string) {
+export function lobbySeats(token: string | null) {
   return api(
-    "auth/lobby-seats",
+    token === null ? "auth/demo-seats" : "auth/lobby-seats",
     z.object({
       seats: z.array(z.object({ seat: z.number(), available: z.boolean() })),
       yours: z.number().nullable(),
     }),
     "POST",
-    { token },
+    token === null ? {} : { token },
   );
 }
 
-export function enterLobby(token: string, seat?: number) {
+export function enterLobby(token: string | null, seat?: number) {
   return api(
-    "auth/lobby",
-    z.object({ id: z.string(), seat: z.number() }).catchall(z.unknown()),
+    token === null ? "auth/demo-enter" : "auth/lobby",
+    z
+      .object({
+        id: z.string(),
+        seat: z.number(),
+        workspaceId: z.uuid().nullable(),
+      })
+      .catchall(z.unknown()),
     "POST",
-    seat ? { token, seat } : { token },
+    {
+      ...(token === null ? {} : { token }),
+      ...(seat === undefined ? {} : { seat }),
+    },
   );
 }
 

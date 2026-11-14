@@ -12,7 +12,7 @@ import {
   signInWithLink,
   signOut,
 } from "./auth/accounts";
-import { env } from "./env";
+import { env, publicDemoToken } from "./env";
 import { workspaceRoute } from "./http/workspace-routes";
 import { enterLobby, lobbySeats, seatCookie } from "./auth/lobby";
 import { readBody } from "./http/body";
@@ -40,15 +40,34 @@ export async function handleRequest(
         return response;
       }
       requireCondition(
-        ["register", "login", "link", "lobby", "lobby-seats"].includes(path[1]),
+        [
+          "register",
+          "login",
+          "link",
+          "lobby",
+          "lobby-seats",
+          "demo-enter",
+          "demo-seats",
+        ].includes(path[1]),
         "NOT_FOUND",
         "Route not found.",
       );
-      const body = await readBody(request);
+      const input = await readBody(request);
+      const demo = path[1] === "demo-enter" || path[1] === "demo-seats";
+      let body = input;
+      if (demo) {
+        const token = publicDemoToken();
+        requireCondition(token, "NOT_FOUND", "The public demo is unavailable.");
+        const seat =
+          input && typeof input === "object" && "seat" in input
+            ? input.seat
+            : undefined;
+        body = seat === undefined ? { token } : { token, seat };
+      }
       // On Vercel x-real-ip equals x-forwarded-for, which the platform overwrites with the connecting client's IP.
       const client = request.headers.get("x-real-ip") ?? "unknown";
       const resume = cookieJar.get(seatCookie)?.value;
-      if (path[1] === "lobby-seats")
+      if (path[1] === "lobby-seats" || path[1] === "demo-seats")
         return NextResponse.json(await lobbySeats(body, client, resume), {
           headers: { "Cache-Control": "no-store" },
         });
@@ -58,11 +77,12 @@ export async function handleRequest(
         secure: process.env.NODE_ENV === "production",
         path: "/",
       };
-      if (path[1] === "lobby") {
+      if (path[1] === "lobby" || path[1] === "demo-enter") {
         const entered = await enterLobby(body, client, resume);
         const response = NextResponse.json({
           ...entered.account,
           seat: entered.seat,
+          workspaceId: entered.workspaceId,
         });
         response.cookies.set(sessionCookie, entered.token, {
           ...cookie,

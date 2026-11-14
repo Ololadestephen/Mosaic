@@ -10,16 +10,20 @@ async function seedLobby() {
     "tsx",
     "tests/e2e/seed-lobby.ts",
   ]);
-  return JSON.parse(stdout) as { token: string };
+  return JSON.parse(stdout) as { token: string; oldWorkspaceId: string };
 }
 
 test("one lobby link: claim a seat, sign out, return to the same seat; others see it in use", async ({
   browser,
 }) => {
-  const { token } = await seedLobby();
+  const { token, oldWorkspaceId } = await seedLobby();
   const judge = await browser.newContext({
     extraHTTPHeaders: { "x-real-ip": randomUUID() },
   });
+  await judge.addInitScript(
+    (id) => localStorage.setItem("mosaic-workspace", id),
+    oldWorkspaceId,
+  );
   const page = await judge.newPage();
   await page.goto(`/lobby#${token}`);
   await page.getByRole("button", { name: /Seat 1/ }).click();

@@ -334,6 +334,9 @@
   .entry-header {
     height: 76px;
   }
+  .hero-backdrop {
+    inset-inline: -20px;
+  }
   .entry-nav > a:not(.entry-signin) {
     display: none;
   }
@@ -347,4 +350,71 @@
   .closing {
     padding: 36px 24px;
   }
+}
+
+.landing-walkthrough,
+.landing-faq {
+  border-top: 1px solid var(--line);
+  padding: clamp(48px, 8vw, 92px) 0;
+}
+.landing-walkthrough {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: clamp(24px, 6vw, 76px);
+  align-items: start;
+}
+.landing-walkthrough h2,
+.landing-faq h2 {
+  font:
+    400 clamp(32px, 4vw, 48px) / 1.08 var(--font-display),
+    Georgia,
+    serif;
+  margin: 0 0 24px;
+}
+.landing-walkthrough p,
+.landing-faq p {
+  color: var(--muted);
+  line-height: 1.6;
+}
+.landing-walkthrough a {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+.walkthrough-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: clamp(20px, 4vw, 34px);
+  display: grid;
+  gap: 16px;
+}
+.walkthrough-card blockquote {
+  margin: 0;
+}
+.walkthrough-card button {
+  justify-self: start;
+}
+.walkthrough-label,
+.walkthrough-choice small {
+  display: block;
+  color: var(--muted);
+}
+.walkthrough-label {
+  margin: 0;
+}
+.walkthrough-choice {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--wash);
+}
+.landing-faq details {
+  max-width: 760px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+.landing-faq summary {
+  cursor: pointer;
 }
