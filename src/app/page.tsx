@@ -82,6 +82,9 @@ export default function Home() {
             <Link className="button quiet-button" href={start}>
               {startLabel}
             </Link>
+            <a className="button quiet-button" href="#how">
+              See how it works
+            </a>
           </div>
         </div>
         <ReviewPreview />
