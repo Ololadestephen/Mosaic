@@ -418,3 +418,10 @@
 .landing-faq summary {
   cursor: pointer;
 }
+
+.entry-nav.demo-nav {
+  gap: clamp(12px, 3vw, 28px);
+}
+.entry-nav.demo-nav > a {
+  display: inline;
+}

@@ -13,7 +13,18 @@ test("visitors can try review and undo without signing in", async ({
       writes.push(request.url());
   });
   await page.goto("/");
-  await page.getByRole("link", { name: "Try the walkthrough" }).click();
+  await page.getByRole("link", { name: "Open demo" }).click();
+  await expect(page).toHaveURL(/\/demo$/);
+  await expect(page.getByRole("heading", { name: "Board" })).toBeVisible();
+  await page.getByRole("link", { name: "See the supporting excerpt" }).click();
+  await expect(page.locator("#demo-source mark")).toContainText(
+    "phishing emails",
+  );
+  await page.getByText("Example apply receipt").click();
+  await expect(
+    page.getByText(/Before: no employee reminder task/),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "Try apply and undo" }).click();
   const demo = page.getByRole("region", { name: "Try a review" });
   const apply = demo.getByRole("button", { name: "Apply selected change" });
   await expect(apply).toBeDisabled();
