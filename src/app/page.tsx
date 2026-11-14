@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { History, Quote, ShieldCheck } from "lucide-react";
-import { publicDemoToken, registrationOpen } from "@/server/env";
+import { registrationOpen } from "@/server/env";
 import { GlowCard } from "@/components/glow-card";
 import { Arrow } from "@/components/icons";
 import { HeroBackdrop, HeroHeadline } from "@/components/landing/hero-motion";
@@ -39,7 +39,6 @@ const steps = [
 ];
 
 export default function Home() {
-  const demoAvailable = Boolean(publicDemoToken());
   const canRegister = registrationOpen();
   const start = canRegister ? "/login?mode=register" : "/login";
   const startLabel = canRegister
@@ -77,18 +76,15 @@ export default function Home() {
             approve.
           </p>
           <div className="hero-actions">
-            {demoAvailable ? (
-              <Link className="button primary" href="/demo">
-                Open demo <Arrow />
-              </Link>
-            ) : (
-              <a className="button primary" href="#walkthrough">
-                Try the walkthrough <Arrow />
-              </a>
-            )}
+            <Link className="button primary" href="/demo">
+              Open demo <Arrow />
+            </Link>
             <Link className="button quiet-button" href={start}>
               {startLabel}
             </Link>
+            <a className="button quiet-button" href="#how">
+              See how it works
+            </a>
           </div>
         </div>
         <ReviewPreview />
