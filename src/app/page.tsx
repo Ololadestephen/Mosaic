@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { History, Quote, ShieldCheck } from "lucide-react";
-import { registrationOpen } from "@/server/env";
+import { openAppAccountId, registrationOpen } from "@/server/env";
 import { GlowCard } from "@/components/glow-card";
 import { Arrow } from "@/components/icons";
 import { HeroBackdrop, HeroHeadline } from "@/components/landing/hero-motion";
@@ -40,10 +40,17 @@ const steps = [
 
 export default function Home() {
   const canRegister = registrationOpen();
-  const start = canRegister ? "/login?mode=register" : "/login";
-  const startLabel = canRegister
-    ? "Create your workspace"
-    : "Sign in to your workspace";
+  const open = Boolean(openAppAccountId());
+  const start = open
+    ? "/open"
+    : canRegister
+      ? "/login?mode=register"
+      : "/login";
+  const startLabel = open
+    ? "Open the app"
+    : canRegister
+      ? "Create your workspace"
+      : "Sign in to your workspace";
   return (
     <main className="entry-page">
       <header className="entry-header">
@@ -59,9 +66,15 @@ export default function Home() {
         <nav aria-label="Page sections" className="entry-nav">
           <a href="#how">How it works</a>
           <a href="#why">Why Mosaic</a>
-          <Link href="/login" className="entry-signin">
-            Sign in
-          </Link>
+          {open ? (
+            <a href="/open" className="entry-signin">
+              Open the app
+            </a>
+          ) : (
+            <Link href="/login" className="entry-signin">
+              Sign in
+            </Link>
+          )}
         </nav>
       </header>
 
@@ -76,12 +89,25 @@ export default function Home() {
             approve.
           </p>
           <div className="hero-actions">
-            <Link className="button primary" href="/demo">
-              Open demo <Arrow />
-            </Link>
-            <Link className="button quiet-button" href={start}>
-              {startLabel}
-            </Link>
+            {open ? (
+              <>
+                <a className="button primary" href="/open">
+                  Open the app <Arrow />
+                </a>
+                <Link className="button quiet-button" href="/demo">
+                  Open demo
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link className="button primary" href="/demo">
+                  Open demo <Arrow />
+                </Link>
+                <Link className="button quiet-button" href={start}>
+                  {startLabel}
+                </Link>
+              </>
+            )}
             <a className="button quiet-button" href="#how">
               See how it works
             </a>
@@ -152,14 +178,15 @@ export default function Home() {
 
       <section className="closing">
         <h2>Let the plan follow the facts.</h2>
-        <Link className="button primary" href={start}>
+        {/* A plain link: prefetching /open would start a session. */}
+        <a className="button primary" href={start}>
           {startLabel} <Arrow />
-        </Link>
+        </a>
       </section>
 
       <footer className="entry-footer">
         <span>© 2026 Mosaic</span>
-        <Link href="/login">Sign in to Mosaic</Link>
+        {!open && <Link href="/login">Sign in to Mosaic</Link>}
       </footer>
     </main>
   );

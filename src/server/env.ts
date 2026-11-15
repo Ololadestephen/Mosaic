@@ -75,6 +75,13 @@ export function publicDemoToken() {
   return token && /^[A-Za-z0-9_-]{43,100}$/.test(token) ? token : undefined;
 }
 
+// The account every visitor uses in the sign-in-free app. It must be an editor of exactly one workspace.
+export function openAppAccountId() {
+  if (process.env.VERCEL_ENV === "preview") return undefined;
+  const parsed = z.uuid().safeParse(process.env.OPEN_APP_ACCOUNT_ID);
+  return parsed.success ? parsed.data : undefined;
+}
+
 export function registrationOpen() {
   const parsed = z
     .enum(["true", "false"])

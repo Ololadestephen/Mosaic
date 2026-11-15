@@ -8,6 +8,7 @@ import { addRevision, analyzeSource, loadSource } from "@/client/commands";
 import { Dialog } from "../dialog";
 import { SourcePassage } from "./source-passage";
 import { RevisionComparison } from "./revision-comparison";
+import { CoverageReview } from "../review/coverage-review";
 import { Arrow } from "../icons";
 export function SourceDetailView({
   workspaceId,
@@ -130,6 +131,13 @@ export function SourceDetailView({
   const draft = source.changes.find(
     (change) => change.sourceVersionId === version.id,
   );
+  // Tasks-only coverage needs no proposal. Without live proposals it replaces the analysis controls.
+  const coverage =
+    canEdit &&
+    source.coverageAvailable &&
+    Boolean(predecessor) &&
+    draft?.state !== "draft";
+  const coverageOnly = coverage && !aiEnabled;
   const run = source.analysisRuns.find(
     (run) => run.sourceVersionId === version.id,
   );
@@ -193,7 +201,8 @@ export function SourceDetailView({
             <Arrow />
           </Link>
         ) : (
-          canEdit && (
+          canEdit &&
+          !coverageOnly && (
             <button
               className="primary"
               onClick={analyze}
@@ -231,7 +240,8 @@ export function SourceDetailView({
             " Free-tier inputs and responses may be used for Google's product improvement and human review. Use synthetic data for this validation."}
         </p>
       ) : (
-        !aiEnabled && (
+        !aiEnabled &&
+        !coverageOnly && (
           <p className="notice">
             Live {aiProvider} analysis is unavailable. Your source is saved.
             Fixture output is never substituted for a live proposal.
@@ -249,6 +259,13 @@ export function SourceDetailView({
         <p className="error" role="alert">
           {error}
         </p>
+      )}
+      {coverage && (
+        <CoverageReview
+          key={version.id}
+          workspaceId={workspaceId}
+          target={`revisions/${version.id}`}
+        />
       )}
       <article className="source-paper">
         <p className="eyebrow">Immutable source · Version {version.number}</p>
