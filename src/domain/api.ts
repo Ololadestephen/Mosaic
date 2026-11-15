@@ -101,6 +101,7 @@ export const workspacePayload = z.object({
     }),
   ),
   passageReviewTaskIds: z.array(idValue),
+  taskTitles: z.record(z.string(), z.string()).default({}),
   aiEnabled: z.boolean(),
   aiProvider: z.enum(["Gemini", "OpenRouter"]),
   aiModel: z.string(),

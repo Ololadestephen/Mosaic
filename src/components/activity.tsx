@@ -10,11 +10,13 @@ import { Arrow } from "./icons";
 export function Activity({
   workspaceId,
   batches,
+  taskTitles,
   canEdit,
   onSaved,
 }: {
   workspaceId: string;
   batches: WorkspaceData["activity"];
+  taskTitles: WorkspaceData["taskTitles"];
   canEdit: boolean;
   onSaved: () => Promise<void>;
 }) {
@@ -25,8 +27,9 @@ export function Activity({
   const [busy, setBusy] = useState(false);
   const [key, setKey] = useState(() => crypto.randomUUID());
   const [query, setQuery] = useState("");
+  const title = (taskId: string) => taskTitles[taskId] ?? "A task";
   const visibleBatches = batches.filter((batch) =>
-    `${batch.id} ${batch.actorName} ${batch.operation} ${JSON.stringify(batch.changes)}`
+    `${batch.changes.map((change) => title(change.taskId)).join(" ")} ${batch.actorName} ${batch.operation} ${JSON.stringify(batch.changes)}`
       .toLowerCase()
       .includes(query.toLowerCase()),
   );
@@ -81,8 +84,9 @@ export function Activity({
             </div>
             <p>
               {batch.result.count} recorded{" "}
-              {batch.result.count === 1 ? "change" : "changes"} · batch{" "}
-              {batch.id.slice(0, 8)}
+              {batch.result.count === 1 ? "change" : "changes"}
+              {batch.changes.length > 0 &&
+                ` · ${[...new Set(batch.changes.map((change) => title(change.taskId)))].join(", ")}`}
             </p>
             {batch.changeSetId && (
               <Link
@@ -97,7 +101,7 @@ export function Activity({
               {batch.changes.map((change, index) => (
                 <p key={index}>
                   <Link href={`/app/tasks/${change.taskId}`}>
-                    {change.taskId.slice(0, 8)}
+                    {title(change.taskId)}
                   </Link>{" "}
                   · {change.field}: {change.before ?? "—"} →{" "}
                   {change.after ?? "—"}
@@ -151,7 +155,7 @@ export function Activity({
               <div>
                 <b>{outcome.field}</b>
                 <small>
-                  Task {outcome.taskId.slice(0, 8)} · {outcome.detail}
+                  {title(outcome.taskId)} · {outcome.detail}
                 </small>
               </div>
             </div>

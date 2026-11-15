@@ -36,7 +36,13 @@ export async function workspaceData(actor: Actor, workspaceId: string) {
           ),
         ),
       ];
-      return { drafts, activity, decisions, passageReviewTaskIds };
+      // Activity and undo name tasks by title, including archived ones, never by ID.
+      const titled = await tx<{ id: string; title: string }[]>`
+        SELECT id, title FROM tasks WHERE workspace_id = ${workspaceId} AND ${recordVisibleTo(actor)}`;
+      const taskTitles = Object.fromEntries(
+        titled.map(({ id, title }) => [id, title]),
+      );
+      return { drafts, activity, decisions, passageReviewTaskIds, taskTitles };
     }),
   ]);
   const provider = analysisProvider();
