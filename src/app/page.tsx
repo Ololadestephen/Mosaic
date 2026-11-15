@@ -161,8 +161,9 @@ export default function Home() {
         <details>
           <summary>Can I try it without signing in?</summary>
           <p>
-            Yes. The public walkthrough runs in your browser. Sign in to manage
-            real sources and tasks in your workspace.
+            {open
+              ? "Yes. Open the app to use a shared workspace built from CISA’s CrowdStrike alert. Everyone who opens it sees the same tasks and changes."
+              : "Yes. The public walkthrough runs in your browser. Sign in to manage real sources and tasks in your workspace."}
           </p>
         </details>
         <details>
