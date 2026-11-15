@@ -49,6 +49,11 @@ test("labelled coverage response fixture: review uncovered source, then apply on
   await page.goto(`/app/changes/${seed.changeSetId}`);
   await page.getByRole("button", { name: "Check coverage" }).click();
   await expect(page.getByText("1 classified · 1 uncovered")).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Revision coverage" })
+      .getByText("“FICTIONAL TEST BRIEF”"),
+  ).toBeVisible();
   const sourceLink = page.getByRole("link", {
     name: "Source passage · v2",
     exact: true,
