@@ -66,11 +66,21 @@ const commands: Command[] = [
   async (request, path, actor, workspaceId) => {
     if (path[2] !== "changes" || path[4] !== "coverage" || path.length !== 5)
       return unmatched();
-    const changeSetId = id.parse(path[3]);
+    const target = { changeSetId: id.parse(path[3]) };
     if (request.method === "GET")
-      return currentCoverageFingerprint(actor, workspaceId, changeSetId);
+      return currentCoverageFingerprint(actor, workspaceId, target);
     if (request.method === "POST")
-      return checkCoverage(actor, workspaceId, changeSetId, request.signal);
+      return checkCoverage(actor, workspaceId, target, request.signal);
+    notFound();
+  },
+  async (request, path, actor, workspaceId) => {
+    if (path[2] !== "revisions" || path[4] !== "coverage" || path.length !== 5)
+      return unmatched();
+    const target = { versionId: id.parse(path[3]) };
+    if (request.method === "GET")
+      return currentCoverageFingerprint(actor, workspaceId, target);
+    if (request.method === "POST")
+      return checkCoverage(actor, workspaceId, target, request.signal);
     notFound();
   },
   async (request, path, actor, workspaceId) => {

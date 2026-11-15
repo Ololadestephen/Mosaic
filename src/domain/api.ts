@@ -134,6 +134,7 @@ export const taskDetail = z.object({
   ),
 });
 export const sourceDetail = z.object({
+  coverageAvailable: z.boolean().default(false),
   id: idValue,
   title: z.string(),
   visibility: z.enum(["workspace", "private"]),

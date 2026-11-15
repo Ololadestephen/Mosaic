@@ -16,6 +16,7 @@ import { env, publicDemoToken } from "./env";
 import { workspaceRoute } from "./http/workspace-routes";
 import { enterLobby, lobbySeats, seatCookie } from "./auth/lobby";
 import { readBody } from "./http/body";
+import { isOpenAppAccount } from "./auth/open-app";
 
 export async function handleRequest(
   request: Request,
@@ -109,6 +110,16 @@ export async function handleRequest(
     const account = await resolveSession(cookieJar.get(sessionCookie)?.value);
     requireCondition(account, "UNAUTHENTICATED", "Sign in to continue.");
     const actor = { userId: account.id };
+    // Visitors share one account, so it can't create workspaces, add members or generate proposals.
+    if (isOpenAppAccount(actor.userId))
+      requireCondition(
+        method === "GET" ||
+          (path[0] === "workspaces" &&
+            path.length > 2 &&
+            !["analyze", "members"].includes(path[2])),
+        "FORBIDDEN",
+        "The open app can’t do this. It can edit tasks, add revisions and check coverage.",
+      );
     if (path[0] === "session" && method === "GET")
       return NextResponse.json(account);
     const result = await workspaceRoute(request, path, actor);

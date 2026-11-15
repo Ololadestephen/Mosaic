@@ -2,7 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { checkCoverage, loadCoverageFingerprint } from "@/client/commands";
+import {
+  checkCoverage,
+  type CoverageTarget,
+  loadCoverageFingerprint,
+} from "@/client/commands";
 import type { Proposal } from "@/client/types";
 
 type Result = Awaited<ReturnType<typeof checkCoverage>>;
@@ -10,21 +14,23 @@ type Result = Awaited<ReturnType<typeof checkCoverage>>;
 export function CoverageReview({
   draft,
   workspaceId,
+  target = `changes/${draft?.id}`,
 }: {
-  draft: Proposal;
   workspaceId: string;
-}) {
+} & (
+  | { draft: Proposal; target?: undefined }
+  | { draft?: undefined; target: CoverageTarget }
+)) {
   const [result, setResult] = useState<Result>();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
-  const changeSetId = draft.id;
 
   useEffect(() => {
     if (!result) return;
     let active = true;
     async function verify() {
       try {
-        const current = await loadCoverageFingerprint(workspaceId, changeSetId);
+        const current = await loadCoverageFingerprint(workspaceId, target);
         if (current.fingerprint === result?.fingerprint) return;
       } catch {
         // Hide a result if its freshness cannot be established.
@@ -45,14 +51,14 @@ export function CoverageReview({
       window.clearInterval(timer);
       window.removeEventListener("focus", verify);
     };
-  }, [result, workspaceId, changeSetId]);
+  }, [result, workspaceId, target]);
 
   async function run() {
     setPending(true);
     setError("");
     setResult(undefined);
     try {
-      setResult(await checkCoverage(workspaceId, changeSetId));
+      setResult(await checkCoverage(workspaceId, target));
     } catch (cause) {
       setError(
         cause instanceof Error ? cause.message : "The coverage check failed.",
@@ -72,9 +78,9 @@ export function CoverageReview({
     <section className="question-panel" aria-label="Revision coverage">
       <h3>Revision coverage</h3>
       <p>
-        Check whether changed passages are addressed by existing tasks or
-        proposals. This sends the revision changes and review context to
-        OpenServ.
+        {draft
+          ? "Check whether changed passages are addressed by existing tasks or proposals. This sends the revision changes and review context to OpenServ."
+          : "Check whether each changed passage is addressed by an existing task. This sends the revision changes and the visible tasks to OpenServ."}
       </p>
       <button disabled={pending} onClick={run}>
         {pending ? "Checking coverage…" : "Check coverage"}
@@ -114,16 +120,17 @@ export function CoverageReview({
                 {entry.taskTitles.length > 0 && (
                   <p>Existing tasks · {entry.taskTitles.join(", ")}</p>
                 )}
-                {entry.proposalKeys.map((key) => (
-                  <p key={key}>
-                    <a
-                      href={`#proposal-item-${draft.items.findIndex((item) => item.key === key)}`}
-                    >
-                      Proposed item{" "}
-                      {draft.items.findIndex((item) => item.key === key) + 1}
-                    </a>
-                  </p>
-                ))}
+                {draft?.items &&
+                  entry.proposalKeys.map((key) => (
+                    <p key={key}>
+                      <a
+                        href={`#proposal-item-${draft.items.findIndex((item) => item.key === key)}`}
+                      >
+                        Proposed item{" "}
+                        {draft.items.findIndex((item) => item.key === key) + 1}
+                      </a>
+                    </p>
+                  ))}
               </li>
             ))}
           </ol>

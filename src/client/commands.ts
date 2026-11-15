@@ -242,9 +242,12 @@ export function signOut() {
   return api("auth/logout", z.object({ ok: z.literal(true) }), "POST");
 }
 
-export function checkCoverage(workspaceId: string, changeSetId: string) {
+// A coverage target is "changes/<changeSetId>" or "revisions/<versionId>".
+export type CoverageTarget = `${"changes" | "revisions"}/${string}`;
+
+export function checkCoverage(workspaceId: string, target: CoverageTarget) {
   return api(
-    `workspaces/${workspaceId}/changes/${changeSetId}/coverage`,
+    `workspaces/${workspaceId}/${target}/coverage`,
     coverageReview,
     "POST",
   );
@@ -252,10 +255,10 @@ export function checkCoverage(workspaceId: string, changeSetId: string) {
 
 export function loadCoverageFingerprint(
   workspaceId: string,
-  changeSetId: string,
+  target: CoverageTarget,
 ) {
   return api(
-    `workspaces/${workspaceId}/changes/${changeSetId}/coverage`,
+    `workspaces/${workspaceId}/${target}/coverage`,
     coverageFingerprint,
   );
 }

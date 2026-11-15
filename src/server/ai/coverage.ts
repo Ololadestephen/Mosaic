@@ -11,15 +11,21 @@ import { reportError } from "../diagnostics";
 import { env } from "../env";
 import { analysisContext } from "../reconciliation";
 import { coverageAvailable } from "./coverage-access";
+import { isOpenAppAccount } from "../auth/open-app";
 import { classifyCoverage } from "./serv-coverage";
 
-async function coverageSnapshot(
+// Coverage runs on a draft proposal (tasks and proposed items) or on a revision alone (tasks only).
+export type CoverageTarget = { changeSetId: string } | { versionId: string };
+
+async function targetDraft(
   tx: Transaction,
   actor: Actor,
   workspaceId: string,
-  changeSetId: string,
+  target: CoverageTarget,
 ) {
-  const draft = await draftRecord(tx, workspaceId, changeSetId);
+  if (!("changeSetId" in target))
+    return { draft: null, versionId: target.versionId };
+  const draft = await draftRecord(tx, workspaceId, target.changeSetId);
   requireCondition(draft, "NOT_FOUND", "Change set not found.");
   assertVisible(draft.restrictedTo, actor);
   requireCondition(
@@ -27,12 +33,22 @@ async function coverageSnapshot(
     "CONFLICT",
     "This proposal is no longer a draft.",
   );
-  const context = await analysisContext(
+  return { draft, versionId: draft.sourceVersionId };
+}
+
+async function coverageSnapshot(
+  tx: Transaction,
+  actor: Actor,
+  workspaceId: string,
+  target: CoverageTarget,
+) {
+  const { draft, versionId } = await targetDraft(
     tx,
     actor,
     workspaceId,
-    draft.sourceVersionId,
+    target,
   );
+  const context = await analysisContext(tx, actor, workspaceId, versionId);
   const previous = context.versions.find(
     ({ id }) => id === context.source.predecessorId,
   );
@@ -63,7 +79,8 @@ async function coverageSnapshot(
       archived,
     }),
   );
-  const proposals = draft.items.filter(
+  const items = draft?.items ?? [];
+  const proposals = items.filter(
     (item) =>
       item.kind !== "update" ||
       tasks.some(
@@ -76,15 +93,14 @@ async function coverageSnapshot(
       JSON.stringify([
         previous.id,
         context.source.id,
-        draft.revision,
-        draft.items,
+        draft?.revision ?? null,
+        items,
         tasks,
       ]),
     )
     .digest("hex");
 
   return {
-    draft,
     previous,
     selected: context.source,
     tasks,
@@ -97,7 +113,7 @@ async function coverageSnapshot(
 export async function currentCoverageFingerprint(
   actor: Actor,
   workspaceId: string,
-  changeSetId: string,
+  target: CoverageTarget,
 ) {
   requireCondition(
     coverageAvailable(actor),
@@ -109,7 +125,7 @@ export async function currentCoverageFingerprint(
       tx,
       actor,
       workspaceId,
-      changeSetId,
+      target,
     );
     return { fingerprint };
   });
@@ -118,7 +134,7 @@ export async function currentCoverageFingerprint(
 export async function checkCoverage(
   actor: Actor,
   workspaceId: string,
-  changeSetId: string,
+  target: CoverageTarget,
   signal?: AbortSignal,
 ) {
   const config = env();
@@ -133,12 +149,7 @@ export async function checkCoverage(
     workspaceId,
     "write",
     async (tx) => {
-      const snapshot = await coverageSnapshot(
-        tx,
-        actor,
-        workspaceId,
-        changeSetId,
-      );
+      const snapshot = await coverageSnapshot(tx, actor, workspaceId, target);
       await tx`SELECT pg_advisory_xact_lock(682051007)`;
       const [usage] = await tx<
         { total: number; daily: number; running: number; account: number }[]
@@ -157,7 +168,9 @@ export async function checkCoverage(
       requireCondition(
         usage.total < config.SERV_COVERAGE_ATTEMPT_LIMIT &&
           usage.daily < config.AI_DAILY_CALL_LIMIT &&
-          usage.account < config.AI_ACCOUNT_TOTAL_CALL_LIMIT,
+          // Visitors share the open-app account; the total and daily caps bound it instead.
+          (isOpenAppAccount(actor.userId) ||
+            usage.account < config.AI_ACCOUNT_TOTAL_CALL_LIMIT),
         "QUOTA_EXHAUSTED",
         "The coverage analysis allowance is exhausted.",
       );
@@ -184,12 +197,7 @@ export async function checkCoverage(
       signal,
     );
     return await inWorkspace(actor, workspaceId, "write", async (tx) => {
-      const current = await coverageSnapshot(
-        tx,
-        actor,
-        workspaceId,
-        changeSetId,
-      );
+      const current = await coverageSnapshot(tx, actor, workspaceId, target);
       requireCondition(
         current.fingerprint === snapshot.fingerprint,
         "CONFLICT",

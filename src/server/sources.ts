@@ -9,6 +9,7 @@ import { inWorkspace } from "./auth/authorization";
 import { recordVisibleTo, sourceVisibleTo } from "./auth/visibility";
 import type { Transaction } from "./db/client";
 import { listPassageReviews } from "./passage-signals";
+import { coverageAvailable } from "./ai/coverage-access";
 
 export type Source = {
   id: string;
@@ -83,7 +84,14 @@ export async function getSource(
     const passageReviews = await listPassageReviews(tx, actor, workspaceId, {
       sourceId,
     });
-    return { ...source, versions, changes, analysisRuns, passageReviews };
+    return {
+      ...source,
+      versions,
+      changes,
+      analysisRuns,
+      passageReviews,
+      coverageAvailable: coverageAvailable(actor),
+    };
   });
 }
 
