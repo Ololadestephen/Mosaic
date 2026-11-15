@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { RecordedCoverage } from "@/components/landing/recorded-coverage";
 
 const bulletin =
   "https://content.govdelivery.com/accounts/USDHSCISA/bulletins/3a9a578";
@@ -14,6 +15,7 @@ export default function DemoPage() {
           <a href="#demo-board">Board</a>
           <a href="#demo-source">Source</a>
           <a href="#demo-review">Review</a>
+          <a href="#demo-coverage">Coverage</a>
         </nav>
       </header>
       <section className="landing-walkthrough" aria-labelledby="demo-title">
@@ -102,6 +104,7 @@ export default function DemoPage() {
           </details>
         </div>
       </section>
+      <RecordedCoverage />
     </main>
   );
 }
