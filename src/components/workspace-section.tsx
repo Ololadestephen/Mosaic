@@ -135,6 +135,7 @@ export function WorkspaceSection({
         <Activity
           workspaceId={workspaceId}
           batches={workspace.activity}
+          taskTitles={workspace.taskTitles}
           canEdit={canEdit}
           onSaved={refresh}
         />

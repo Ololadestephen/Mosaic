@@ -92,10 +92,19 @@ test("first-use source and task workflow persists at desktop and 360px", async (
     fullPage: true,
   });
   await page.getByRole("link", { name: "Activity", exact: true }).click();
+  await expect(page.locator(".activity-list").first()).toContainText(
+    "Confirm the fictional supplier",
+  );
+  await expect(page.locator(".activity-list").first()).not.toContainText(
+    /batch [0-9a-f]{8}/,
+  );
   await page.getByRole("button", { name: "Preview safe undo" }).first().click();
   await expect(
     page.getByRole("heading", { name: "Unwind, with care." }),
   ).toBeVisible();
+  await expect(page.locator(".undo-row").first()).toContainText(
+    "Confirm the fictional supplier ·",
+  );
   await page.getByRole("button", { name: "Undo eligible changes" }).click();
   await expect(page.getByRole("status")).toContainText("1 fields restored");
   await page.getByRole("button", { name: "Close dialog" }).click();

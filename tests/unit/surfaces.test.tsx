@@ -126,6 +126,7 @@ describe("rendered surfaces", () => {
         createElement(Activity, {
           workspaceId: task.workspaceId,
           batches: [] as unknown as WorkspaceData["activity"],
+          taskTitles: {},
           canEdit: false,
           onSaved: async () => undefined,
         }),
