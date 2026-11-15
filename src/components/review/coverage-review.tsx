@@ -111,6 +111,7 @@ export function CoverageReview({
                       ? "No task change"
                       : "Covered"}
                 </b>
+                <blockquote>“{entry.passage.text.trim()}”</blockquote>
                 <p>{entry.reason}</p>
                 <Link
                   href={`/app/sources/${entry.sourceId}?version=${entry.versionId}&start=${entry.passage.start}&end=${entry.passage.end}`}
