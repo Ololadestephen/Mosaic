@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { History, Quote, ShieldCheck } from "lucide-react";
+import {
+  Briefcase,
+  History,
+  Quote,
+  Scale,
+  ShieldAlert,
+  ShieldCheck,
+} from "lucide-react";
 import { openAppAccountId, registrationOpen } from "@/server/env";
 import { GlowCard } from "@/components/glow-card";
 import { Arrow } from "@/components/icons";
@@ -7,6 +14,7 @@ import { HeroBackdrop, HeroHeadline } from "@/components/landing/hero-motion";
 import { ReviewPreview } from "@/components/landing/review-preview";
 
 import { PublicWalkthrough } from "@/components/landing/public-walkthrough";
+import { RecordedCoverage } from "@/components/landing/recorded-coverage";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +33,24 @@ const features = [
     icon: History,
     title: "Undo that respects later work",
     body: "Roll back an applied change; anything edited since is kept and reported as a conflict.",
+  },
+];
+
+const audiences = [
+  {
+    icon: ShieldAlert,
+    title: "Security and incident response",
+    body: "Advisories are updated as an incident unfolds. See which new guidance your response plan already handles and which still needs a task.",
+  },
+  {
+    icon: Scale,
+    title: "Policy and compliance",
+    body: "When a regulation, standard or internal policy is revised, find the changes that touch existing controls and tasks, cited to the exact words.",
+  },
+  {
+    icon: Briefcase,
+    title: "Client and project briefs",
+    body: "When a client revises the brief, review proposed task changes instead of rereading the whole document to spot what moved.",
   },
 ];
 
@@ -66,6 +92,7 @@ export default function Home() {
         <nav aria-label="Page sections" className="entry-nav">
           <a href="#how">How it works</a>
           <a href="#why">Why Mosaic</a>
+          <a href="#coverage">Coverage</a>
           {open ? (
             <a href="/open" className="entry-signin">
               Open the app
@@ -95,7 +122,7 @@ export default function Home() {
                   Open the app <Arrow />
                 </a>
                 <Link className="button quiet-button" href="/demo">
-                  Open demo
+                  See a recorded run
                 </Link>
               </>
             ) : (
@@ -129,6 +156,39 @@ export default function Home() {
             <p>{body}</p>
           </GlowCard>
         ))}
+      </section>
+
+      <RecordedCoverage
+        id="coverage"
+        action={
+          open ? (
+            <a className="button primary" href="/open">
+              Try it live <Arrow />
+            </a>
+          ) : (
+            <Link className="button quiet-button" href="/demo">
+              See the full demo
+            </Link>
+          )
+        }
+      />
+
+      <section id="who" className="audiences" aria-labelledby="who-title">
+        <h2 id="who-title">For work that follows a changing source</h2>
+        <div className="feature-grid">
+          {audiences.map(({ icon: Icon, title, body }) => (
+            <GlowCard className="feature-card" key={title}>
+              <Icon
+                className="feature-icon"
+                size={20}
+                strokeWidth={1.6}
+                aria-hidden="true"
+              />
+              <h3>{title}</h3>
+              <p>{body}</p>
+            </GlowCard>
+          ))}
+        </div>
       </section>
 
       <section id="how" className="steps" aria-labelledby="how-title">
