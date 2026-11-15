@@ -239,6 +239,13 @@
   letter-spacing: -0.3px;
   margin-bottom: 8px;
 }
+.feature-card h3 {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 400;
+  font-size: 22px;
+  letter-spacing: -0.3px;
+  margin-bottom: 8px;
+}
 .feature-card p {
   margin: 0;
   color: var(--muted);
@@ -249,7 +256,12 @@
   padding: 72px 0 96px;
   border-top: 1px solid var(--line);
 }
+.audiences {
+  padding-top: 72px;
+  border-top: 1px solid var(--line);
+}
 .steps > h2,
+.audiences > h2,
 .closing h2 {
   font-family: var(--font-display), Georgia, serif;
   font-weight: 400;
@@ -450,4 +462,7 @@
 }
 .entry-nav.demo-nav > a {
   display: inline;
+}
+.coverage-action {
+  margin-top: 24px;
 }

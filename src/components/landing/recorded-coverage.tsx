@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 const alert =
   "https://www.cisa.gov/news-events/alerts/2024/07/19/widespread-it-outage-due-crowdstrike-update";
 
@@ -82,7 +84,13 @@ const labels: Record<Status, string> = {
   no_task_change: "No task change",
 };
 
-export function RecordedCoverage() {
+export function RecordedCoverage({
+  id = "demo-coverage",
+  action,
+}: {
+  id?: string;
+  action?: ReactNode;
+}) {
   const uncovered = recorded.filter(({ status }) => status === "uncovered");
   const ordered = [
     ...uncovered,
@@ -90,12 +98,12 @@ export function RecordedCoverage() {
   ];
   return (
     <section
-      id="demo-coverage"
+      id={id}
       className="landing-walkthrough"
-      aria-labelledby="coverage-title"
+      aria-labelledby={`${id}-title`}
     >
       <div>
-        <h2 id="coverage-title">Check coverage with SERV</h2>
+        <h2 id={`${id}-title`}>Check coverage with SERV</h2>
         <p>
           When CISA updated its alert on July 26, 2024, did a plan built from
           the July 24 version already handle every change? Mosaic finds the
@@ -108,6 +116,7 @@ export function RecordedCoverage() {
           still decides what to do.
         </p>
         <a href={alert}>Read CISA’s alert and its updates</a>
+        {action && <div className="hero-actions coverage-action">{action}</div>}
       </div>
       <div className="walkthrough-card">
         <p className="walkthrough-label">
